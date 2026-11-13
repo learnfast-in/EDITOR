@@ -3,20 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NeonCut · AI Video Editor</title>
+  <title>NeonCut Pro · GPU WebGL Video Editor</title>
+  <meta name="description" content="GPU WebGL Shader Video Editor with After Effects Motion Tile, Sapphire HDR Glow, Twixtor optical frame blending, MediaPipe AI Cutout, and Gemini 2.5 Flash AI Director." />
+  <meta property="og:title" content="NeonCut Pro · GPU WebGL Video Editor" />
+  <meta property="og:description" content="GPU WebGL Shader Video Editor with After Effects Motion Tile, Sapphire HDR Glow, Twixtor optical frame blending, MediaPipe AI Cutout, and Gemini 2.5 Flash AI Director." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
   <script src="https://unpkg.com/lucide@0.383.0/dist/umd/lucide.min.js"></script>
   <style>
-    html, body, #root { height: 100%; margin: 0; background: #0a0a0e; }
+    html, body, #root { height: 100%; margin: 0; background: #09090d; font-family: 'Outfit', system-ui, sans-serif; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
     input[type="range"] { cursor: pointer; }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #0d0d13; }
+    ::-webkit-scrollbar-thumb { background: #27272f; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f4e; }
   </style>
 </head>
-<body class="bg-[#0a0a0e] text-zinc-200 overflow-hidden">
+<body class="bg-[#09090d] text-zinc-200 overflow-hidden antialiased">
   <div id="root"></div>
 
   <script>
@@ -74,30 +97,37 @@
     const VolumeX = mk("volume-x");
     const Diamond = mk("diamond");
     const Crosshair = mk("crosshair");
+    const RotateCcw = mk("rotate-ccw");
+    const Repeat = mk("repeat");
+    const Layers = mk("layers");
+    const User = mk("user");
+    const Cpu = mk("cpu");
+    const Sliders = mk("sliders");
 
     /* ============================ CONSTANTS ============================ */
 
     const TABS = [
       { id: "media", label: "Media", icon: Upload },
       { id: "templates", label: "Templates", icon: LayoutTemplate },
-      { id: "effects", label: "Effects", icon: Sparkles },
+      { id: "effects", label: "Shaders", icon: Sparkles },
       { id: "transitions", label: "Transitions", icon: ArrowRightLeft },
       { id: "text", label: "Text", icon: Type },
     ];
 
     const EFFECTS = [
-      { id: "shake", name: "Damped Spring Shake", hint: "Beat-locked spring jitter" },
-      { id: "bassZoom", name: "Bass Pump Zoom", hint: "Punch-in on every bass hit" },
-      { id: "flash", name: "White Impact Flash", hint: "Flash on bass transients" },
-      { id: "rgb", name: "RGB Chromatic Aberration", hint: "Colour fringing" },
-      { id: "scan", name: "VHS Retro Scanlines", hint: "CRT line overlay" },
-      { id: "grain", name: "Film Grain", hint: "Animated noise" },
-      { id: "vignette", name: "Lens Vignette", hint: "Darkened corners" },
-      { id: "glow", name: "Gaussian Glow", hint: "Bloom halo" },
-      { id: "glitch", name: "Horizontal Glitch Slice", hint: "Displaced slices" },
-      { id: "kaleido", name: "Mirror Kaleidoscope", hint: "Mirrored half-frame" },
-      { id: "radial", name: "Radial Blur", hint: "Zoom streaks" },
-      { id: "strobe", name: "Strobe", hint: "Beat-rate flicker" },
+      { id: "shake", name: "Motion-Tiled Beat Shake", hint: "Mirrored-edge damped spring + 3D roll" },
+      { id: "bassZoom", name: "Bass Pump Zoom", hint: "Punch-in on every bass transient" },
+      { id: "flash", name: "Controlled Impact Flash", hint: "Filmic flash without midtone blowout" },
+      { id: "rgb", name: "Per-Channel RGB Tear", hint: "Independent R/G/B coordinate separation" },
+      { id: "radial", name: "Directional / Radial Blur", hint: "Multi-sample GPU velocity streaks" },
+      { id: "glow", name: "Sapphire HDR Bloom", hint: "Thresholded highlight-only bloom" },
+      { id: "moodyCC", name: "Dark Moody CC", hint: "Crushed blacks + teal/crimson split-tone" },
+      { id: "scan", name: "VHS Retro Scanlines", hint: "Hardware CRT line shader" },
+      { id: "grain", name: "35mm Film Grain", hint: "Procedural GPU organic grain" },
+      { id: "vignette", name: "Optical Lens Vignette", hint: "Smooth edge falloff" },
+      { id: "glitch", name: "Horizontal Glitch Slice", hint: "GPU displaced scan slices" },
+      { id: "kaleido", name: "Mirror Kaleidoscope", hint: "Symmetrical half-frame mirror" },
+      { id: "strobe", name: "Beat Strobe", hint: "16th-note flicker" },
     ];
 
     const GRADES = [
@@ -109,70 +139,216 @@
     ];
 
     const TRANSITIONS = [
-      { id: "dissolve", name: "Cross Dissolve" },
-      { id: "whip", name: "Whip Pan Blur" },
+      { id: "whip", name: "3D Camera Whip Pan" },
       { id: "smash", name: "Zoom In Smash" },
       { id: "flashW", name: "Flash White" },
       { id: "glitchCut", name: "Glitch Cut" },
+      { id: "dissolve", name: "Cross Dissolve" },
     ];
 
     const PRESETS = [
-      { id: "highlight", name: "Yellow Highlighter Sweep" },
+      { id: "scoreboard", name: "Football Scoreboard Callout" },
+      { id: "kinetic", name: "Kinetic AE 3D Title" },
       { id: "hormozi", name: "Hormozi Bold Pop-Up" },
+      { id: "highlight", name: "Yellow Highlighter Sweep" },
       { id: "typewriter", name: "Typewriter Documentary" },
       { id: "neon", name: "Neon Glow Title" },
     ];
 
-    const DEFAULT_SETTINGS = { zoom: 0, shake: 0, blur: 0, glow: 0, rgb: 0, contrast: 100, sat: 100, speed: 1, ramp: 0 };
+    const DEFAULT_SETTINGS = {
+      zoom: 0,
+      shake: 0,
+      blur: 0,
+      glow: 0,
+      glowThreshold: 0.62,
+      rgb: 0,
+      tilt3d: 0,
+      moodyCC: 0,
+      crushBlacks: 0,
+      contrast: 100,
+      sat: 100,
+      speed: 1,
+      ramp: 0,
+      twixtor: false,
+      reverse: false,
+      pingPong: false,
+      cutout: false,
+      aura: 45,
+      auraColor: "#22d3ee",
+    };
 
     const ASPECTS = { "16:9": [16, 9], "9:16": [9, 16], "1:1": [1, 1] };
 
-    /* Trigger words that activate the intensity boost and auto-split */
-    const INTENSE_RE = /intense|hardcore|phonk|funk|sem deroma/i;
+    const INTENSE_RE = /intense|hardcore|phonk|funk|sem deroma|slayer|khatarnak|tez|banger|aggressive/i;
 
     const TEMPLATES = [
       {
-        id: "amv", name: "AMV Phonk Beat-Sync", badge: "Beat-Sync",
-        color: "from-fuchsia-600 to-red-700",
-        desc: "Bass-zoom, white flash, RGB split, velocity curve",
-        settings: { zoom: 45, shake: 40, blur: 0, glow: 30, rgb: 55, contrast: 130, sat: 120, speed: 1, ramp: 0.3 },
-        fx: { bassZoom: 85, flash: 70, shake: 55, glow: 30 }, grade: {},
-        texts: [{ text: "NO BRAKES", preset: "hormozi" }],
-      },
-      {
-        id: "doc", name: "Vox Documentary Explainer", badge: "Explainer",
-        color: "from-amber-700 to-stone-800",
-        desc: "Paper texture, 3D newspaper card, highlighter, typewriter",
-        settings: { zoom: 10, shake: 0, blur: 0, glow: 0, rgb: 0, contrast: 110, sat: 90, speed: 1, ramp: 0 },
-        fx: { grain: 25, vignette: 40 }, grade: { paper: true, card: true },
+        id: "parth",
+        name: "Parth Edits (Football Flow)",
+        badge: "Football Flow",
+        color: "from-emerald-600 via-teal-800 to-zinc-950",
+        desc: "Twixtor slow-mo blend, reverse ping-pong cuts, dark moody CC, AI cutout + scoreboard text behind player",
+        settings: {
+          zoom: 18,
+          shake: 28,
+          blur: 22,
+          glow: 32,
+          glowThreshold: 0.65,
+          rgb: 22,
+          tilt3d: 38,
+          moodyCC: 82,
+          crushBlacks: 48,
+          contrast: 128,
+          sat: 86,
+          speed: 0.55,
+          ramp: 0.72,
+          twixtor: true,
+          reverse: false,
+          pingPong: true,
+          cutout: true,
+          aura: 55,
+          auraColor: "#38bdf8",
+        },
+        fx: { bassZoom: 60, radial: 30, vignette: 62, grain: 25, moodyCC: 82, glow: 32 },
+        grade: {},
+        trans: { id: "whip", dur: 0.45 },
+        splitOnBeats: true,
         texts: [
-          { text: "THE HIDDEN STORY", preset: "highlight" },
-          { text: "Here is what the records actually show.", preset: "typewriter" },
+          { text: "90+4' · MATCH WINNER", preset: "scoreboard", layer: "behind", x: 0.5, y: 0.34, size: 78 },
+          { text: "COLD BLOODED", preset: "kinetic", layer: "behind", x: 0.5, y: 0.52, size: 104 },
         ],
       },
       {
-        id: "anime", name: "Velocity Anime Edit", badge: "Speed Ramp",
-        color: "from-sky-500 to-indigo-700",
-        desc: "Eased speed ramps with directional motion blur",
-        settings: { zoom: 20, shake: 0, blur: 35, glow: 20, rgb: 10, contrast: 115, sat: 125, speed: 1.15, ramp: 0.8 },
-        fx: { radial: 55, flash: 20 }, grade: {},
-        texts: [{ text: "VELOCITY", preset: "neon" }],
+        id: "slayer",
+        name: "Slayer Edits (Hardcore Phonk)",
+        badge: "Hardcore Phonk",
+        color: "from-rose-600 via-red-800 to-zinc-950",
+        desc: "Motion-tiled violent beat shakes, per-channel RGB tear, fast velocity ramps, zero overexposure",
+        settings: {
+          zoom: 42,
+          shake: 86,
+          blur: 36,
+          glow: 34,
+          glowThreshold: 0.74,
+          rgb: 76,
+          tilt3d: 55,
+          moodyCC: 65,
+          crushBlacks: 42,
+          contrast: 136,
+          sat: 112,
+          speed: 1.12,
+          ramp: 0.85,
+          twixtor: false,
+          reverse: false,
+          pingPong: false,
+          cutout: false,
+          aura: 0,
+          auraColor: "#f43f5e",
+        },
+        fx: { bassZoom: 90, flash: 44, shake: 92, rgb: 80, glow: 34, vignette: 55, moodyCC: 65 },
+        grade: {},
+        trans: { id: "smash", dur: 0.32 },
+        splitOnBeats: true,
+        texts: [
+          { text: "UNSTOPPABLE", preset: "hormozi", layer: "front", x: 0.5, y: 0.8, size: 96 },
+        ],
       },
       {
-        id: "cyber", name: "Cyberpunk Glitch Intro", badge: "Neon",
-        color: "from-cyan-500 to-violet-700",
-        desc: "Scanlines, chromatic shift, neon contrast, bass shake",
-        settings: { zoom: 15, shake: 35, blur: 0, glow: 55, rgb: 70, contrast: 150, sat: 160, speed: 1, ramp: 0 },
-        fx: { scan: 60, glitch: 55, bassZoom: 40 }, grade: {},
-        texts: [{ text: "SYSTEM OVERRIDE", preset: "neon" }],
+        id: "wizard",
+        name: "Wizard Edits (Anime Flow)",
+        badge: "Anime Flow",
+        color: "from-sky-500 via-indigo-700 to-violet-950",
+        desc: "Cubic-bezier speed curves, directional radial blur, Sapphire HDR glow, smooth 3D camera whip",
+        settings: {
+          zoom: 24,
+          shake: 26,
+          blur: 48,
+          glow: 64,
+          glowThreshold: 0.58,
+          rgb: 38,
+          tilt3d: 68,
+          moodyCC: 35,
+          crushBlacks: 22,
+          contrast: 122,
+          sat: 132,
+          speed: 0.85,
+          ramp: 0.92,
+          twixtor: true,
+          reverse: false,
+          pingPong: false,
+          cutout: false,
+          aura: 60,
+          auraColor: "#a855f7",
+        },
+        fx: { radial: 78, glow: 64, bassZoom: 48, flash: 24, vignette: 35 },
+        grade: {},
+        trans: { id: "whip", dur: 0.55 },
+        splitOnBeats: false,
+        texts: [
+          { text: "DOMAIN EXPANSION", preset: "neon", layer: "front", x: 0.5, y: 0.78, size: 76 },
+        ],
       },
       {
-        id: "cine", name: "Cinematic Film Trailer", badge: "2.39:1",
-        color: "from-teal-600 to-orange-600",
+        id: "vox",
+        name: "Vox Documentary",
+        badge: "Explainer",
+        color: "from-amber-700 via-stone-800 to-zinc-950",
+        desc: "3D tilted paper card, yellow highlighter sweep, typewriter captions, subtle film grain",
+        settings: {
+          zoom: 8,
+          shake: 0,
+          blur: 0,
+          glow: 0,
+          glowThreshold: 0.7,
+          rgb: 0,
+          tilt3d: 0,
+          moodyCC: 0,
+          crushBlacks: 10,
+          contrast: 110,
+          sat: 90,
+          speed: 1,
+          ramp: 0,
+          twixtor: false,
+          reverse: false,
+          pingPong: false,
+          cutout: false,
+          aura: 0,
+          auraColor: "#facc15",
+        },
+        fx: { grain: 28, vignette: 42 },
+        grade: { paper: true, card: true },
+        trans: { id: "dissolve", dur: 0.5 },
+        splitOnBeats: false,
+        texts: [
+          { text: "THE HIDDEN RECORD", preset: "highlight", layer: "front", x: 0.5, y: 0.76, size: 68 },
+          { text: "Here is what the footage reveals.", preset: "typewriter", layer: "front", x: 0.5, y: 0.87, size: 46 },
+        ],
+      },
+      {
+        id: "cyber",
+        name: "Cyberpunk Glitch Intro",
+        badge: "Neon",
+        color: "from-cyan-500 to-violet-800",
+        desc: "Scanlines, per-channel RGB split, Sapphire glow, bass shake",
+        settings: { ...DEFAULT_SETTINGS, zoom: 16, shake: 38, glow: 55, glowThreshold: 0.58, rgb: 72, contrast: 140, sat: 145 },
+        fx: { scan: 60, glitch: 55, bassZoom: 45, glow: 55, rgb: 72 },
+        grade: {},
+        trans: { id: "glitchCut", dur: 0.4 },
+        splitOnBeats: false,
+        texts: [{ text: "SYSTEM OVERRIDE", preset: "neon", layer: "front", x: 0.5, y: 0.8, size: 74 }],
+      },
+      {
+        id: "cine",
+        name: "Cinematic Film Trailer",
+        badge: "2.39:1",
+        color: "from-teal-600 to-orange-700",
         desc: "Letterbox bars, teal-orange grade, slow Ken Burns",
-        settings: { zoom: 5, shake: 0, blur: 0, glow: 15, rgb: 0, contrast: 120, sat: 110, speed: 0.9, ramp: 0 },
-        fx: { grain: 30, vignette: 55 }, grade: { letterbox: true, tealOrange: true, kenburns: true },
-        texts: [{ text: "A FILM", preset: "neon" }],
+        settings: { ...DEFAULT_SETTINGS, zoom: 6, glow: 20, glowThreshold: 0.68, contrast: 118, sat: 108, speed: 0.9, twixtor: true },
+        fx: { grain: 30, vignette: 58 },
+        grade: { letterbox: true, tealOrange: true, kenburns: true },
+        trans: { id: "dissolve", dur: 0.7 },
+        splitOnBeats: false,
+        texts: [{ text: "A MOTION PICTURE", preset: "kinetic", layer: "front", x: 0.5, y: 0.8, size: 64 }],
       },
     ];
 
@@ -181,22 +357,58 @@
     const uid = () => Math.random().toString(36).slice(2, 10);
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
     const fmtTC = (t) => {
-      const f = Math.floor((t % 1) * 30);
-      const s = Math.floor(t);
+      const safe = Math.max(0, t || 0);
+      const f = Math.floor((safe % 1) * 30);
+      const s = Math.floor(safe);
       return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60, f]
         .map((n) => String(n).padStart(2, "0")).join(":");
     };
-    const isVideoFile = (f) => f.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(f.name);
-    const isAudioFile = (f) => f.type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a)$/i.test(f.name);
-    const mkText = (text, preset, x, y, dur) => ({
-      id: uid(), text, preset, x, y, size: preset === "hormozi" ? 96 : 72, start: 0, dur,
+    const isVideoFile = (f) => f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(f.name);
+    const isAudioFile = (f) => f.type.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(f.name);
+
+    const mkText = (text, preset, x, y, dur, layer = "front", size) => ({
+      id: uid(),
+      text,
+      preset,
+      layer,
+      x,
+      y,
+      size: size || (preset === "hormozi" || preset === "kinetic" ? 94 : preset === "scoreboard" ? 74 : 68),
+      start: 0,
+      dur,
     });
+
     const newClip = (mediaId, start, dur, off = 0) => ({
-      id: uid(), mediaId, start, dur, off, trans: null,
-      settings: { ...DEFAULT_SETTINGS }, fx: {}, grade: {}, kfs: [],
+      id: uid(),
+      mediaId,
+      start,
+      dur,
+      off,
+      trans: null,
+      settings: { ...DEFAULT_SETTINGS },
+      fx: {},
+      grade: {},
+      kfs: [],
     });
-    const cloneLook = (c) => ({ settings: { ...c.settings }, fx: { ...c.fx }, grade: { ...c.grade } });
+
+    const cloneLook = (c) => ({
+      settings: { ...DEFAULT_SETTINGS, ...(c.settings || {}) },
+      fx: { ...(c.fx || {}) },
+      grade: { ...(c.grade || {}) },
+      trans: c.trans ? { ...c.trans } : null,
+    });
+
     const segsEnd = (arr) => arr.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
+
+    function hexToRgbNorm(hex) {
+      const h = (hex || "#22d3ee").replace("#", "");
+      if (h.length !== 6) return [0.13, 0.83, 0.93];
+      return [
+        parseInt(h.slice(0, 2), 16) / 255,
+        parseInt(h.slice(2, 4), 16) / 255,
+        parseInt(h.slice(4, 6), 16) / 255,
+      ];
+    }
 
     function kfZoom(kfs, t) {
       if (!kfs.length) return null;
@@ -214,12 +426,94 @@
       return s[s.length - 1].v;
     }
 
+    /* Cubic-bezier ease-in-out speed curve for Wizard / Parth velocity ramps */
+    function cubicBezier01(t, p1 = 0.82, p2 = 0.18) {
+      const u = clamp(t, 0, 1);
+      const inv = 1 - u;
+      return 3 * inv * inv * u * p1 + 3 * inv * u * u * p2 + u * u * u;
+    }
+
+    /* Procedural Demos (including Striker Flow with clear subject silhouette for AI Cutout testing) */
     const PROC_GENS = {
+      striker: (g, w, h, t) => {
+        const sky = g.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, "#05111a");
+        sky.addColorStop(0.55, "#0b2232");
+        sky.addColorStop(1, "#07140e");
+        g.fillStyle = sky;
+        g.fillRect(0, 0, w, h);
+
+        // Stadium floodlights
+        for (let i = 0; i < 4; i++) {
+          const lx = w * (0.15 + i * 0.23);
+          const ly = h * 0.16;
+          const rg = g.createRadialGradient(lx, ly, 2, lx, ly, h * 0.26);
+          rg.addColorStop(0, "rgba(220,248,255,0.95)");
+          rg.addColorStop(0.25, "rgba(56,189,248,0.28)");
+          rg.addColorStop(1, "rgba(0,0,0,0)");
+          g.fillStyle = rg;
+          g.fillRect(0, 0, w, h);
+        }
+
+        // Pitch lines
+        g.strokeStyle = "rgba(180,255,210,0.22)";
+        g.lineWidth = Math.max(2, h / 240);
+        const hy = h * 0.68;
+        for (let i = 0; i < 6; i++) {
+          const y = hy + (i / 6) * (h - hy);
+          g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+        }
+
+        // Moving athlete silhouette + kit rim light (for AI cutout / text-behind test)
+        const px = w * 0.5 + Math.sin(t * 1.4) * w * 0.08;
+        const py = h * 0.58 + Math.abs(Math.sin(t * 3.2)) * -h * 0.03;
+        const s = h / 540;
+        g.save();
+        g.translate(px, py);
+        g.shadowColor = "rgba(56,189,248,0.5)";
+        g.shadowBlur = 14 * s;
+        // Torso
+        g.fillStyle = "#e2e8f0";
+        g.beginPath();
+        g.roundRect(-34 * s, -78 * s, 68 * s, 96 * s, 14 * s);
+        g.fill();
+        // Jersey number
+        g.shadowBlur = 0;
+        g.fillStyle = "#0f172a";
+        g.font = `900 ${42 * s}px Outfit, sans-serif`;
+        g.textAlign = "center";
+        g.fillText("10", 0, -18 * s);
+        // Head
+        g.fillStyle = "#d6a47e";
+        g.beginPath();
+        g.arc(0, -108 * s, 24 * s, 0, Math.PI * 2);
+        g.fill();
+        // Hair
+        g.fillStyle = "#111827";
+        g.beginPath();
+        g.arc(0, -116 * s, 24 * s, Math.PI, Math.PI * 2);
+        g.fill();
+        // Legs running stride
+        const stride = Math.sin(t * 6.5) * 28 * s;
+        g.fillStyle = "#0f172a";
+        g.fillRect(-26 * s, 16 * s, 22 * s, 74 * s + stride * 0.3);
+        g.fillRect(6 * s, 16 * s, 22 * s, 74 * s - stride * 0.3);
+        // Football at feet
+        g.fillStyle = "#f8fafc";
+        g.beginPath();
+        g.arc(46 * s + stride * 0.5, 92 * s, 14 * s, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      },
       neon: (g, w, h, t) => {
         const grd = g.createLinearGradient(0, 0, 0, h);
-        grd.addColorStop(0, "#1a0033"); grd.addColorStop(1, "#ff0080");
-        g.fillStyle = grd; g.fillRect(0, 0, w, h);
-        g.strokeStyle = "rgba(0,255,255,0.85)"; g.lineWidth = Math.max(2, h / 360);
+        grd.addColorStop(0, "#120029");
+        grd.addColorStop(0.55, "#2b0347");
+        grd.addColorStop(1, "#ff007a");
+        g.fillStyle = grd;
+        g.fillRect(0, 0, w, h);
+        g.strokeStyle = "rgba(0,240,255,0.85)";
+        g.lineWidth = Math.max(2, h / 340);
         const hy = h * 0.55, sh = (t * 0.8) % 1;
         for (let i = 0; i < 14; i++) {
           const y = hy + Math.pow((i + sh) / 14, 2) * (h - hy);
@@ -228,22 +522,29 @@
         for (let i = -10; i <= 10; i++) {
           g.beginPath(); g.moveTo(w / 2, hy); g.lineTo(w / 2 + i * w * 0.12, h); g.stroke();
         }
-        g.fillStyle = "#fff"; g.font = `bold ${h * 0.1}px sans-serif`; g.textAlign = "center";
-        g.fillText("NEON GRID", w / 2, h * 0.3);
+        // Sun orb
+        const sunY = h * 0.34;
+        const sunR = h * 0.16;
+        const sg = g.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+        sg.addColorStop(0, "#fde047");
+        sg.addColorStop(1, "#f43f5e");
+        g.fillStyle = sg;
+        g.beginPath(); g.arc(w / 2, sunY, sunR, 0, Math.PI * 2); g.fill();
       },
       bokeh: (g, w, h, t) => {
-        g.fillStyle = "#0b0f1f"; g.fillRect(0, 0, w, h);
-        for (let i = 0; i < 40; i++) {
-          const x = (Math.sin(i * 12.9 + t * 0.4) * 0.5 + 0.5) * w;
-          const y = (Math.cos(i * 7.1 + t * 0.3) * 0.5 + 0.5) * h;
-          const r = h * 0.03 + (i % 7) * h * 0.03 * (1 + 0.3 * Math.sin(t * 3 + i));
+        g.fillStyle = "#080c18"; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 42; i++) {
+          const x = (Math.sin(i * 12.9 + t * 0.45) * 0.5 + 0.5) * w;
+          const y = (Math.cos(i * 7.1 + t * 0.35) * 0.5 + 0.5) * h;
+          const r = h * 0.03 + (i % 7) * h * 0.028 * (1 + 0.3 * Math.sin(t * 3 + i));
           g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2);
-          g.fillStyle = `hsla(${(i * 37 + t * 30) % 360},90%,60%,0.35)`; g.fill();
+          g.fillStyle = `hsla(${(i * 37 + t * 30) % 360},90%,60%,0.38)`;
+          g.fill();
         }
       },
       shapes: (g, w, h, t) => {
-        g.fillStyle = "#120a00"; g.fillRect(0, 0, w, h);
-        g.save(); g.translate(w / 2, h / 2); g.rotate(t * 0.8);
+        g.fillStyle = "#110903"; g.fillRect(0, 0, w, h);
+        g.save(); g.translate(w / 2, h / 2); g.rotate(t * 0.85);
         for (let i = 0; i < 6; i++) {
           g.rotate(Math.PI / 3);
           g.fillStyle = `hsl(${(t * 60 + i * 60) % 360},90%,55%)`;
@@ -254,6 +555,7 @@
     };
 
     const PROC_DEMOS = [
+      { id: "d0", name: "Striker Flow (demo)", kind: "proc", gen: "striker", duration: 12 },
       { id: "d1", name: "Neon Grid (demo)", kind: "proc", gen: "neon", duration: 12 },
       { id: "d2", name: "Bokeh Pulse (demo)", kind: "proc", gen: "bokeh", duration: 12 },
       { id: "d3", name: "Spin Shapes (demo)", kind: "proc", gen: "shapes", duration: 12 },
@@ -270,18 +572,17 @@
         let ph = 0;
         for (let i = 0; i < sr * 0.35 && s0 + i < len; i++) {
           const t = i / sr;
-          ph += (2 * Math.PI * (50 + 90 * Math.exp(-t * 30))) / sr;
-          d[s0 + i] += Math.sin(ph) * Math.exp(-t * 9) * 0.9;
+          ph += (2 * Math.PI * (50 + 95 * Math.exp(-t * 30))) / sr;
+          d[s0 + i] += Math.sin(ph) * Math.exp(-t * 9) * 0.88;
         }
         const hs = Math.floor((t0 + period / 2) * sr);
-        for (let i = 0; i < sr * 0.05 && hs + i < len; i++) {
-          d[hs + i] += (Math.random() * 2 - 1) * Math.exp((-i / sr) * 90) * 0.15;
+        for (let i = 0; i < sr * 0.06 && hs + i < len; i++) {
+          d[hs + i] += (Math.random() * 2 - 1) * Math.exp((-i / sr) * 75) * 0.22;
         }
       }
       return { buffer, beats };
     }
 
-    /* Bass-band energy envelope: one-pole low-pass, RMS per 20 ms hop */
     function bassEnvelope(buf) {
       const data = buf.getChannelData(0), sr = buf.sampleRate;
       const hop = 0.02;
@@ -298,7 +599,6 @@
       return { env, hop };
     }
 
-    /* Peak picking on the envelope with an adaptive threshold */
     function peaksFromEnv({ env, hop }) {
       const n = env.length;
       let mean = 0;
@@ -307,13 +607,13 @@
       let v = 0;
       for (let i = 0; i < n; i++) v += (env[i] - mean) ** 2;
       const sd = Math.sqrt(v / Math.max(1, n));
-      const thr = mean + 1.2 * sd;
+      const thr = mean + 1.15 * sd;
       const beats = [];
       let last = -1;
       for (let i = 1; i < n - 1; i++) {
         if (env[i] > thr && env[i] >= env[i - 1] && env[i] >= env[i + 1]) {
           const t = i * hop;
-          if (t - last >= 0.25) { beats.push(t); last = t; }
+          if (t - last >= 0.24) { beats.push(t); last = t; }
         }
       }
       return beats;
@@ -323,9 +623,8 @@
       return peaksFromEnv(bassEnvelope(buf));
     }
 
-    /* Sliding-window search over the whole track.
-       Score = normalised bass energy (60%) + normalised beat density (40%). */
-    function findBestDrop(buf, windowSec) {
+    /* Auto-Find Best Beat Drop: trims long 5-min+ songs to the hardest ~30s drop window */
+    function findBestDrop(buf, windowSec = 30) {
       const envObj = bassEnvelope(buf);
       const { env, hop } = envObj;
       const beats = peaksFromEnv(envObj);
@@ -347,7 +646,7 @@
         for (let i = 0; i < beats.length; i++) {
           if (beats[i] >= st && beats[i] < st + W) count++;
         }
-        cands.push({ start: st, energy, density: count / W, count });
+        cands.push({ start: st, energy, density: count / Math.max(1, W), count });
       }
       if (!cands.length) return { start: 0, score: 0, count: 0, W };
 
@@ -355,13 +654,12 @@
       const maxD = Math.max(1e-9, ...cands.map((c) => c.density));
       let best = cands[0];
       for (const c of cands) {
-        c.score = 0.6 * (c.energy / maxE) + 0.4 * (c.density / maxD);
+        c.score = 0.62 * (c.energy / maxE) + 0.38 * (c.density / maxD);
         if (c.score > best.score) best = c;
       }
       return { start: best.start, score: best.score, count: best.count, W };
     }
 
-    /* Timeline-space beat markers from the audio track */
     function beatsTimeline(aSegs, media) {
       const out = [];
       aSegs.forEach((a) => {
@@ -374,51 +672,73 @@
       return out.sort((x, y) => x - y);
     }
 
-    /* Auto-split clips longer than 2 s on every 2nd beat marker */
-    function splitOnBeats(segs, beatsTL) {
+    function splitOnBeats(segs, beatsTL, everyN = 2, alternateReverse = false) {
       let budget = 200;
       const out = [];
       for (const s of segs) {
-        if (s.dur < 2 || budget <= 0) { out.push(s); continue; }
+        if (s.dur < 1.8 || budget <= 0) { out.push(s); continue; }
         const cuts = beatsTL
-          .filter((b) => b > s.start + 0.05 && b < s.start + s.dur - 0.05)
-          .filter((_, i) => i % 2 === 1)
+          .filter((b) => b > s.start + 0.08 && b < s.start + s.dur - 0.08)
+          .filter((_, i) => i % everyN === everyN - 1)
           .slice(0, budget);
         budget -= cuts.length;
         let cur = s;
+        let idx = 0;
         for (const c of cuts) {
           const localCut = c - cur.start;
-          if (localCut <= 0.05 || localCut >= cur.dur - 0.05) continue;
-          const left = { ...cur, dur: localCut, kfs: cur.kfs.filter((k) => k.t < localCut) };
+          if (localCut <= 0.08 || localCut >= cur.dur - 0.08) continue;
+          const left = {
+            ...cur,
+            dur: localCut,
+            settings: { ...cur.settings, reverse: alternateReverse ? (idx % 2 === 1) : cur.settings.reverse },
+            kfs: cur.kfs.filter((k) => k.t < localCut),
+          };
           const right = {
-            ...cur, id: uid(), start: c, dur: cur.dur - localCut,
-            off: cur.off + localCut, trans: null,
+            ...cur,
+            id: uid(),
+            start: c,
+            dur: cur.dur - localCut,
+            off: cur.off + localCut,
+            trans: null,
+            settings: { ...cur.settings, reverse: alternateReverse ? ((idx + 1) % 2 === 1) : cur.settings.reverse },
             kfs: cur.kfs.filter((k) => k.t >= localCut).map((k) => ({ ...k, t: k.t - localCut })),
           };
           out.push(left);
           cur = right;
+          idx++;
         }
         out.push(cur);
       }
       return out;
     }
 
-    /* Intensity boost: doubles the main hard-hitting parameters, capped at 100 */
     function boostIntensity(r) {
-      const b = (v) => Math.min(100, Math.round((v || 0) * 2));
-      const settings = { ...r.settings, shake: b(r.settings.shake), rgb: b(r.settings.rgb) };
+      const b = (v, cap = 100) => Math.min(cap, Math.round((v || 0) * 1.85));
+      const settings = {
+        ...r.settings,
+        shake: b(r.settings.shake),
+        rgb: b(r.settings.rgb),
+        tilt3d: Math.max(r.settings.tilt3d || 0, 50),
+      };
       const fx = { ...r.fx };
-      ["shake", "bassZoom", "flash", "rgb"].forEach((k) => { if (fx[k]) fx[k] = b(fx[k]); });
-      if (!fx.shake && settings.shake === 0) fx.shake = 60;
-      if (!fx.bassZoom) fx.bassZoom = 70;
-      if (!fx.flash) fx.flash = 60;
-      return { ...r, settings, fx, label: `${r.label} · 2× intensity` };
+      ["shake", "bassZoom", "rgb"].forEach((k) => { if (fx[k]) fx[k] = b(fx[k]); });
+      if (fx.flash) fx.flash = Math.min(55, b(fx.flash, 55)); // never overexpose midtones
+      if (!fx.shake && settings.shake === 0) fx.shake = 75;
+      if (!fx.bassZoom) fx.bassZoom = 80;
+      if (!fx.flash) fx.flash = 42;
+      return { ...r, settings, fx, label: `${r.label} · 2× GPU intensity` };
     }
 
     const barLen = (bpm) => 240 / bpm;
+
+    /* Cubic-bezier + harmonic velocity warp for Wizard/Parth speed ramps */
     function warp(x, ramp, P) {
       if (!ramp) return x;
-      return x - ramp * 0.4 * (P / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / P);
+      const cyc = ((x % P) + P) % P;
+      const u = cyc / P;
+      const bez = cubicBezier01(u, 0.85, 0.15);
+      const base = Math.floor(x / P) * P + bez * P;
+      return x + (base - x) * clamp(ramp, 0, 1);
     }
 
     function sinceBeat(beats, x) {
@@ -427,7 +747,7 @@
         const mid = (lo + hi) >> 1;
         if (beats[mid] <= x) { idx = mid; lo = mid + 1; } else hi = mid - 1;
       }
-      return idx < 0 ? 9 : x - beats[idx];
+      return { since: idx < 0 ? 9 : x - beats[idx], idx: Math.max(0, idx) };
     }
 
     function estimateBpm(beats) {
@@ -439,17 +759,562 @@
       return clamp(Math.round(60 / med), 60, 200);
     }
 
+    /* ============================ MEDIAPIPE AI CUTOUT ============================ */
+
+    const MP_STATE = {
+      status: "idle", // idle | loading | ready | error
+      segmenter: null,
+      promise: null,
+      lastRunAt: 0,
+      lastVideoTime: -1,
+      lastMediaId: null,
+    };
+
+    async function ensureSegmenter(onStatus) {
+      if (MP_STATE.segmenter) return MP_STATE.segmenter;
+      if (MP_STATE.promise) return MP_STATE.promise;
+      MP_STATE.status = "loading";
+      onStatus?.("loading");
+      MP_STATE.promise = (async () => {
+        try {
+          const visionMod = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs");
+          const { FilesetResolver, ImageSegmenter } = visionMod;
+          const vision = await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+          );
+          let seg;
+          try {
+            seg = await ImageSegmenter.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+                delegate: "GPU",
+              },
+              runningMode: "VIDEO",
+              outputCategoryMask: false,
+              outputConfidenceMasks: true,
+            });
+          } catch (_) {
+            seg = await ImageSegmenter.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+                delegate: "CPU",
+              },
+              runningMode: "VIDEO",
+              outputCategoryMask: false,
+              outputConfidenceMasks: true,
+            });
+          }
+          MP_STATE.segmenter = seg;
+          MP_STATE.status = "ready";
+          onStatus?.("ready");
+          return seg;
+        } catch (err) {
+          console.warn("MediaPipe ImageSegmenter fallback:", err);
+          MP_STATE.status = "error";
+          onStatus?.("error");
+          return null;
+        }
+      })();
+      return MP_STATE.promise;
+    }
+
+    /* ============================ WEBGL SHADER ENGINE ============================ */
+
+    const VS_QUAD = `
+      attribute vec2 aPos;
+      varying vec2 vUv;
+      void main() {
+        vUv = aPos * 0.5 + 0.5;
+        gl_Position = vec4(aPos, 0.0, 1.0);
+      }
+    `;
+
+    // Pass 1: Twixtor Optical Flow Frame Blend + MediaPipe AI Cutout + Text-Behind-Subject + Neon Aura
+    const FS_PASS1_CUTOUT_TWIXTOR = `
+      precision highp float;
+      varying vec2 vUv;
+      uniform sampler2D uTexCurr;
+      uniform sampler2D uTexPrev;
+      uniform sampler2D uTexMask;
+      uniform sampler2D uTexBehind;
+      uniform float uFrameBlend;
+      uniform float uTwixtor;
+      uniform float uCutout;
+      uniform float uAuraStrength;
+      uniform vec3 uAuraColor;
+      uniform vec2 uTexel;
+      uniform float uFlipY;
+
+      float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+      void main() {
+        vec2 uv = uFlipY > 0.5 ? vec2(vUv.x, 1.0 - vUv.y) : vUv;
+        vec3 currCol = texture2D(uTexCurr, uv).rgb;
+        vec3 baseCol = currCol;
+
+        if (uTwixtor > 0.5 && uFrameBlend > 0.002 && uFrameBlend < 0.998) {
+          vec3 prevCol = texture2D(uTexPrev, uv).rgb;
+          float lC = luma(currCol);
+          float lP = luma(prevCol);
+          float gx = (luma(texture2D(uTexCurr, clamp(uv + vec2(uTexel.x, 0.0), 0.001, 0.999)).rgb)
+                    - luma(texture2D(uTexCurr, clamp(uv - vec2(uTexel.x, 0.0), 0.001, 0.999)).rgb)) * 0.5;
+          float gy = (luma(texture2D(uTexCurr, clamp(uv + vec2(0.0, uTexel.y), 0.001, 0.999)).rgb)
+                    - luma(texture2D(uTexCurr, clamp(uv - vec2(0.0, uTexel.y), 0.001, 0.999)).rgb)) * 0.5;
+          float dt = lC - lP;
+          float denom = gx * gx + gy * gy + 0.015;
+          vec2 flow = clamp(vec2(-dt * gx / denom, -dt * gy / denom) * uTexel * 10.0, -uTexel * 12.0, uTexel * 12.0);
+          vec3 pWarp = texture2D(uTexPrev, clamp(uv + flow * uFrameBlend, 0.001, 0.999)).rgb;
+          vec3 cWarp = texture2D(uTexCurr, clamp(uv - flow * (1.0 - uFrameBlend), 0.001, 0.999)).rgb;
+          baseCol = mix(pWarp, cWarp, smoothstep(0.0, 1.0, uFrameBlend));
+        }
+
+        vec4 behind = texture2D(uTexBehind, uv);
+        if (uCutout > 0.5) {
+          float m = texture2D(uTexMask, uv).r;
+          float subMask = smoothstep(0.32, 0.68, m);
+
+          // 8-tap silhouette dilation for neon aura edge outline
+          float r = 4.5;
+          float maxN = 0.0;
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2( uTexel.x * r,  0.0), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2(-uTexel.x * r,  0.0), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2( 0.0,  uTexel.y * r), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2( 0.0, -uTexel.y * r), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2( uTexel.x * r * 0.7,  uTexel.y * r * 0.7), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2(-uTexel.x * r * 0.7,  uTexel.y * r * 0.7), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2( uTexel.x * r * 0.7, -uTexel.y * r * 0.7), 0.001, 0.999)).r);
+          maxN = max(maxN, texture2D(uTexMask, clamp(uv + vec2(-uTexel.x * r * 0.7, -uTexel.y * r * 0.7), 0.001, 0.999)).r);
+          float auraEdge = clamp(maxN - m, 0.0, 1.0);
+
+          vec3 comp = mix(baseCol, behind.rgb, behind.a);
+          comp += uAuraColor * auraEdge * uAuraStrength * 1.45;
+          comp = mix(comp, baseCol, subMask);
+          gl_FragColor = vec4(comp, 1.0);
+        } else {
+          vec3 comp = mix(baseCol, behind.rgb, behind.a);
+          gl_FragColor = vec4(comp, 1.0);
+        }
+      }
+    `;
+
+    // Pass 2: Mirrored-Edge 3D Camera Transform (Motion Tile) + Directional & Radial Motion Blur + Per-Channel RGB Chromatic Aberration + Glitch + Kaleido
+    const FS_PASS2_CAMERA_BLUR_RGB = `
+      precision highp float;
+      varying vec2 vUv;
+      uniform sampler2D uTex;
+      uniform float uAspect;
+      uniform float uZoom;
+      uniform vec2 uShakeOffset;
+      uniform float uRotZ;
+      uniform vec2 uTilt;
+      uniform vec2 uBlurVel;
+      uniform float uRadialBlur;
+      uniform float uRgbAmt;
+      uniform vec2 uRgbDir;
+      uniform float uGlitch;
+      uniform float uKaleido;
+      uniform float uTime;
+
+      vec2 mirrorUV(vec2 uv) {
+        vec2 t = abs(fract(uv * 0.5) * 2.0 - 1.0);
+        return clamp(1.0 - t, 0.001, 0.999);
+      }
+
+      float hash11(float p) {
+        p = fract(p * 0.1031);
+        p *= p + 33.33;
+        p *= p + p;
+        return fract(p);
+      }
+
+      vec2 cameraUV(vec2 uv) {
+        vec2 p = uv - 0.5;
+        p.x *= uAspect;
+        float z = 1.0 + p.x * uTilt.x + p.y * uTilt.y;
+        p /= max(0.35, z);
+        float c = cos(uRotZ), s = sin(uRotZ);
+        p = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+        p.x /= uAspect;
+        return p / max(0.2, uZoom) + 0.5 - uShakeOffset;
+      }
+
+      void main() {
+        vec2 baseUv = vUv;
+
+        // Horizontal Glitch Slice (GPU)
+        if (uGlitch > 0.001) {
+          float band = floor(baseUv.y * 22.0);
+          float seed = floor(uTime * 14.0);
+          float rnd = hash11(band * 17.3 + seed * 91.7);
+          if (rnd > 0.58 + (1.0 - uGlitch) * 0.38) {
+            float shift = (hash11(band * 5.9 + seed * 3.1) - 0.5) * 0.12 * uGlitch;
+            baseUv.x += shift;
+          }
+        }
+
+        // Mirror Kaleidoscope
+        if (uKaleido > 0.001) {
+          vec2 kUv = baseUv;
+          if (kUv.x > 0.5) kUv.x = 1.0 - kUv.x;
+          baseUv = mix(baseUv, kUv, uKaleido);
+        }
+
+        vec2 camUv = cameraUV(baseUv);
+        vec2 radDir = camUv - 0.5;
+        vec2 blurVec = uBlurVel + radDir * uRadialBlur * 0.085;
+        vec2 rgbVec = normalize(radDir + vec2(0.0001)) * (uRgbAmt * 0.018) + uRgbDir * (uRgbAmt * 0.024);
+
+        vec3 accum = vec3(0.0);
+        float wSum = 0.0;
+        for (int i = -5; i <= 5; i++) {
+          float fi = float(i) / 5.0;
+          float w = 1.0 - 0.5 * abs(fi);
+          vec2 sUv = camUv + blurVec * fi;
+          float r = texture2D(uTex, mirrorUV(sUv + rgbVec)).r;
+          float g = texture2D(uTex, mirrorUV(sUv)).g;
+          float b = texture2D(uTex, mirrorUV(sUv - rgbVec)).b;
+          accum += vec3(r, g, b) * w;
+          wSum += w;
+        }
+        gl_FragColor = vec4(accum / max(0.001, wSum), 1.0);
+      }
+    `;
+
+    // Pass 3a: Sapphire HDR Threshold Bright-Pass
+    const FS_BRIGHT_PASS = `
+      precision highp float;
+      varying vec2 vUv;
+      uniform sampler2D uTex;
+      uniform float uThreshold;
+      void main() {
+        vec3 col = texture2D(uTex, vUv).rgb;
+        float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        float knee = 0.14;
+        float soft = clamp((luma - uThreshold + knee) / (2.0 * knee), 0.0, 1.0);
+        soft = soft * soft * (3.0 - 2.0 * soft);
+        float contrib = max(0.0, luma - uThreshold) + soft * knee * 0.5;
+        vec3 bright = col * (contrib / max(luma, 0.0001));
+        gl_FragColor = vec4(bright, 1.0);
+      }
+    `;
+
+    // Pass 3b/c: Separable 9-tap Gaussian Blur for Sapphire Bloom
+    const FS_GAUSS_BLUR = `
+      precision highp float;
+      varying vec2 vUv;
+      uniform sampler2D uTex;
+      uniform vec2 uDir;
+      void main() {
+        vec3 col = texture2D(uTex, vUv).rgb * 0.227027;
+        col += texture2D(uTex, clamp(vUv + uDir * 1.384615, 0.001, 0.999)).rgb * 0.316216;
+        col += texture2D(uTex, clamp(vUv - uDir * 1.384615, 0.001, 0.999)).rgb * 0.316216;
+        col += texture2D(uTex, clamp(vUv + uDir * 3.230769, 0.001, 0.999)).rgb * 0.070270;
+        col += texture2D(uTex, clamp(vUv - uDir * 3.230769, 0.001, 0.999)).rgb * 0.070270;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    // Pass 4: Final Composite + Transitions + Sapphire Bloom + Dark Moody CC + Grain + Scanlines + Vignette + Letterbox + Front Text
+    const FS_FINAL_GRADE = `
+      precision highp float;
+      varying vec2 vUv;
+      uniform sampler2D uTexScene;
+      uniform sampler2D uTexBloom;
+      uniform sampler2D uTexPrevClip;
+      uniform sampler2D uTexFront;
+      uniform float uTransType; // 0=none,1=dissolve,2=whip,3=smash,4=flashW,5=glitchCut
+      uniform float uTransProg;
+      uniform float uGlowAmt;
+      uniform float uContrast;
+      uniform float uSat;
+      uniform float uMoodyCC;
+      uniform float uCrush;
+      uniform float uTealOrange;
+      uniform float uPaper;
+      uniform float uFlash;
+      uniform float uStrobe;
+      uniform float uGrain;
+      uniform float uScan;
+      uniform float uVignette;
+      uniform float uLetterbox;
+      uniform float uAspect;
+      uniform float uTime;
+
+      float hash12(vec2 p) {
+        vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
+      }
+
+      vec3 sampleTransition(vec2 uv) {
+        vec3 cur = texture2D(uTexScene, uv).rgb;
+        if (uTransType < 0.5 || uTransProg >= 1.0) return cur;
+        float p = clamp(uTransProg, 0.0, 1.0);
+        vec3 prev = texture2D(uTexPrevClip, uv).rgb;
+
+        if (uTransType < 1.5) {
+          return mix(prev, cur, p);
+        } else if (uTransType < 2.5) {
+          // 3D Whip Pan with directional blur
+          float slide = p;
+          vec3 col = vec3(0.0);
+          float blurAmt = (1.0 - p) * 0.06;
+          for (int i = -2; i <= 2; i++) {
+            float off = float(i) * blurAmt * 0.5;
+            float xP = uv.x + slide + off;
+            float xC = uv.x - (1.0 - slide) + off;
+            vec3 cP = xP <= 1.0 ? texture2D(uTexPrevClip, clamp(vec2(xP, uv.y), 0.001, 0.999)).rgb : vec3(0.0);
+            vec3 cC = xC >= 0.0 ? texture2D(uTexScene, clamp(vec2(xC, uv.y), 0.001, 0.999)).rgb : vec3(0.0);
+            col += (xP <= 1.0 ? cP : cC) * 0.2;
+          }
+          return col;
+        } else if (uTransType < 3.5) {
+          // Zoom In Smash
+          float sc = 1.65 - 0.65 * p;
+          vec2 zUv = (uv - 0.5) / sc + 0.5;
+          vec3 cZ = texture2D(uTexScene, clamp(zUv, 0.001, 0.999)).rgb;
+          return mix(prev, cZ, p);
+        } else if (uTransType < 4.5) {
+          // Flash White
+          vec3 base = p < 0.5 ? prev : cur;
+          return mix(base, vec3(1.0), sin(p * 3.14159265) * 0.85);
+        } else {
+          // Glitch Cut
+          float band = floor(uv.y * 24.0);
+          float r = hash12(vec2(band, floor(p * 12.0)));
+          if (band / 24.0 < p) {
+            float dx = (r - 0.5) * 0.14 * (1.0 - p);
+            return texture2D(uTexScene, clamp(vec2(uv.x + dx, uv.y), 0.001, 0.999)).rgb;
+          }
+          return prev;
+        }
+      }
+
+      void main() {
+        vec3 col = sampleTransition(vUv);
+
+        // Sapphire-style HDR Highlight Bloom (screen-like rolloff, zero midtone blowout)
+        if (uGlowAmt > 0.001) {
+          vec3 bloom = texture2D(uTexBloom, vUv).rgb;
+          col = col + bloom * uGlowAmt * (1.0 - clamp(col, 0.0, 1.0) * 0.42);
+        }
+
+        // Crushed Blacks
+        if (uCrush > 0.001) {
+          float lift = uCrush * 0.11;
+          col = max(vec3(0.0), (col - lift) / max(0.25, 1.0 - lift));
+        }
+
+        // Contrast + Dark Moody CC S-curve
+        vec3 sCurve = col * col * (3.0 - 2.0 * clamp(col, 0.0, 1.0));
+        col = mix(col, sCurve, uMoodyCC * 0.65);
+        col = (col - 0.5) * uContrast + 0.5;
+        col = clamp(col, 0.0, 1.35);
+
+        // Saturation
+        float gLuma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        col = mix(vec3(gLuma), col, uSat);
+
+        // Dark Moody CC Teal / Crimson Split-Toning
+        if (uMoodyCC > 0.001) {
+          float shMask = 1.0 - smoothstep(0.02, 0.48, gLuma);
+          float hiMask = smoothstep(0.45, 0.95, gLuma);
+          vec3 tealShadow = vec3(0.03, 0.15, 0.19);
+          vec3 crimsonHi = vec3(0.95, 0.24, 0.21);
+          col = mix(col, col * 0.72 + tealShadow * 0.42, shMask * uMoodyCC * 0.72);
+          col = mix(col, col * 0.85 + crimsonHi * 0.26, hiMask * uMoodyCC * 0.48);
+        }
+
+        // Cinematic Teal-Orange Grade
+        if (uTealOrange > 0.001) {
+          float sh = 1.0 - smoothstep(0.0, 0.55, gLuma);
+          float hi = smoothstep(0.35, 1.0, gLuma);
+          col = mix(col, col * vec3(0.45, 0.95, 1.05), sh * 0.55);
+          col = mix(col, col * vec3(1.15, 0.92, 0.68), hi * 0.55);
+        }
+
+        // Paper Warm Multiply
+        if (uPaper > 0.001) {
+          col = mix(col, col * vec3(0.945, 0.890, 0.753), 0.55);
+        }
+
+        // Controlled Impact Flash + Beat Strobe (filmic soft-clip)
+        if (uFlash > 0.001) {
+          col = mix(col, vec3(1.0), clamp(uFlash * 0.65, 0.0, 0.65));
+        }
+        if (uStrobe > 0.001) {
+          col = mix(col, vec3(1.0), clamp(uStrobe * 0.55, 0.0, 0.55));
+        }
+
+        // VHS Scanlines
+        if (uScan > 0.001) {
+          float line = sin(vUv.y * 540.0 * 3.14159265);
+          if (line < 0.0) col *= (1.0 - 0.48 * uScan);
+        }
+
+        // 35mm Film Grain
+        if (uGrain > 0.001) {
+          float n = hash12(vUv * 960.0 + fract(uTime * 19.37) * 100.0) - 0.5;
+          col += n * 0.14 * uGrain;
+        }
+
+        // Optical Lens Vignette
+        if (uVignette > 0.001) {
+          vec2 d = (vUv - 0.5) * vec2(uAspect, 1.0);
+          float dist = length(d) / max(0.5, length(vec2(uAspect * 0.5, 0.5)));
+          float vig = smoothstep(0.38, 1.08, dist);
+          col *= (1.0 - vig * 0.86 * uVignette);
+        }
+
+        // 2.39:1 Letterbox
+        if (uLetterbox > 0.5) {
+          float bar = max(0.0, (1.0 - (uAspect / 2.39)) * 0.5);
+          if (vUv.y < bar || vUv.y > 1.0 - bar) col = vec3(0.0);
+        }
+
+        // Foreground Text / Vox 3D Card Overlay
+        vec2 fUv = vec2(vUv.x, 1.0 - vUv.y);
+        vec4 front = texture2D(uTexFront, fUv);
+        col = mix(clamp(col, 0.0, 1.0), front.rgb, front.a);
+
+        gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+      }
+    `;
+
+    function compileShader(gl, type, src) {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        const msg = gl.getShaderInfoLog(sh);
+        gl.deleteShader(sh);
+        throw new Error(`Shader error: ${msg}`);
+      }
+      return sh;
+    }
+
+    function createProgram(gl, vsSrc, fsSrc) {
+      const p = gl.createProgram();
+      const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc);
+      const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+      gl.attachShader(p, vs);
+      gl.attachShader(p, fs);
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+        throw new Error(`Program link error: ${gl.getProgramInfoLog(p)}`);
+      }
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      const locs = {};
+      const nUni = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+      for (let i = 0; i < nUni; i++) {
+        const info = gl.getActiveUniform(p, i);
+        locs[info.name] = gl.getUniformLocation(p, info.name);
+      }
+      const aPos = gl.getAttribLocation(p, "aPos");
+      return { p, locs, aPos };
+    }
+
+    function makeTexture(gl, w = 2, h = 2) {
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      return tex;
+    }
+
+    function makeFBO(gl, w, h) {
+      const tex = makeTexture(gl, w, h);
+      const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return { fb, tex, w, h };
+    }
+
+    function resizeFBO(gl, fbo, w, h) {
+      if (fbo.w === w && fbo.h === h) return;
+      fbo.w = w; fbo.h = h;
+      gl.bindTexture(gl.TEXTURE_2D, fbo.tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+
+    function initWebGL(cv) {
+      const opts = { preserveDrawingBuffer: true, antialias: false, alpha: false, powerPreference: "high-performance" };
+      const gl = cv.getContext("webgl2", opts) || cv.getContext("webgl", opts);
+      if (!gl) return null;
+      try {
+        const quad = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+        const progs = {
+          pass1: createProgram(gl, VS_QUAD, FS_PASS1_CUTOUT_TWIXTOR),
+          pass2: createProgram(gl, VS_QUAD, FS_PASS2_CAMERA_BLUR_RGB),
+          bright: createProgram(gl, VS_QUAD, FS_BRIGHT_PASS),
+          blur: createProgram(gl, VS_QUAD, FS_GAUSS_BLUR),
+          final: createProgram(gl, VS_QUAD, FS_FINAL_GRADE),
+        };
+        const texs = {
+          curr: makeTexture(gl),
+          prevFrame: makeTexture(gl),
+          mask: makeTexture(gl),
+          behind: makeTexture(gl),
+          front: makeTexture(gl),
+          prevClip: makeTexture(gl),
+        };
+        const fbos = {
+          fboA: makeFBO(gl, 64, 64),
+          fboB: makeFBO(gl, 64, 64),
+          bloomA: makeFBO(gl, 32, 32),
+          bloomB: makeFBO(gl, 32, 32),
+        };
+        return { gl, quad, progs, texs, fbos };
+      } catch (err) {
+        console.warn("WebGL pipeline init failed, falling back to 2D:", err);
+        return null;
+      }
+    }
+
     /* ============================ ENGINE ============================ */
 
     function makeEngine() {
       return {
-        canvas: null, wave: null, offs: {}, els: new Map(), urls: new Set(),
-        vAudio: new Map(), videoMuted: false,
-        ctx: null, master: null, an: null, dest: null, rec: null, nodes: [],
+        canvas: null,
+        wave: null,
+        glState: null,
+        useWebGL: true,
+        offs: {},
+        els: new Map(),
+        urls: new Set(),
+        vAudio: new Map(),
+        videoMuted: false,
+        ctx: null,
+        master: null,
+        an: null,
+        dest: null,
+        rec: null,
+        nodes: [],
         play: { playing: false, startCtx: 0, startTL: 0 },
-        tl: 0, lastSeg: null, bounds: [], dirty: true, frame: 0,
-        exporting: false, draft: true, aspect: "16:9", savedDraft: true,
-        S: null, api: null, setPlaying: () => {}, setUi: () => {}, setExportPct: () => {},
+        tl: 0,
+        lastSeg: null,
+        frameBuf: { segId: null, lastSrcT: -999, prevSrcT: -999, lastDrawMs: 0, frameIntervalMs: 33.3, hasPrev: false },
+        prevMotion: { dx: 0, dy: 0, sc: 1 },
+        bounds: [],
+        dirty: true,
+        frame: 0,
+        exporting: false,
+        draft: true,
+        aspect: "16:9",
+        savedDraft: true,
+        S: null,
+        api: null,
+        setPlaying: () => {},
+        setUi: () => {},
+        setExportPct: () => {},
       };
     }
 
@@ -465,11 +1330,25 @@
       const long = E.draft ? 960 : 1920;
       const W = aw >= ah ? long : Math.round((long * aw) / ah);
       const H = aw >= ah ? Math.round((long * ah) / aw) : long;
-      cv.width = W; cv.height = H;
-      ["src", "prev", "tmp", "cur"].forEach((k) => { const c = offc(E, k); c.width = W; c.height = H; });
+      cv.width = W;
+      cv.height = H;
+      ["src", "prevFrame", "mask", "behind", "front", "prev", "tmp", "cur"].forEach((k) => {
+        const c = offc(E, k);
+        c.width = W;
+        c.height = H;
+      });
       const sm = offc(E, "small");
-      sm.width = Math.max(8, (W / 8) | 0); sm.height = Math.max(8, (H / 8) | 0);
-      E.lastSeg = null; E.dirty = true;
+      sm.width = Math.max(8, (W / 8) | 0);
+      sm.height = Math.max(8, (H / 8) | 0);
+      if (E.glState) {
+        const { gl, fbos } = E.glState;
+        resizeFBO(gl, fbos.fboA, W, H);
+        resizeFBO(gl, fbos.fboB, W, H);
+        resizeFBO(gl, fbos.bloomA, Math.max(16, (W / 2) | 0), Math.max(16, (H / 2) | 0));
+        resizeFBO(gl, fbos.bloomB, Math.max(16, (W / 2) | 0), Math.max(16, (H / 2) | 0));
+      }
+      E.lastSeg = null;
+      E.dirty = true;
     }
 
     function ensureCtx(E) {
@@ -478,8 +1357,10 @@
         const c = new AC();
         E.ctx = c;
         E.master = c.createGain();
-        E.an = c.createAnalyser(); E.an.fftSize = 1024;
-        E.master.connect(E.an); E.an.connect(c.destination);
+        E.an = c.createAnalyser();
+        E.an.fftSize = 1024;
+        E.master.connect(E.an);
+        E.an.connect(c.destination);
       }
       if (E.ctx.state !== "running") E.ctx.resume().catch(() => {});
       return E.ctx;
@@ -487,7 +1368,7 @@
 
     function wireVideoAudio(E, id, el) {
       if (E.vAudio.has(id)) return;
-      const c = ensureCtx(E);
+      const c = ensureCtx(engineSafe(E));
       const src = c.createMediaElementSource(el);
       const gain = c.createGain();
       gain.gain.value = E.videoMuted ? 0 : 1;
@@ -495,23 +1376,28 @@
       gain.connect(E.master);
       E.vAudio.set(id, { src, gain });
     }
+    function engineSafe(E) { return E; }
 
     function unwireVideoAudio(E, id) {
       const va = E.vAudio.get(id);
       if (!va) return;
-      try { va.gain.disconnect(); } catch (_) { /* already disconnected */ }
-      try { va.src.disconnect(); } catch (_) { /* already disconnected */ }
+      try { va.gain.disconnect(); } catch (_) {}
+      try { va.src.disconnect(); } catch (_) {}
       E.vAudio.delete(id);
     }
 
     function beatInfo(S, t) {
-      const mk = (since) => ({ since, env: Math.exp(-since * 8) });
+      const mk = (since, idx) => ({ since, idx, env: Math.exp(-since * 8) });
       const a = S.aSegs.find((s) => t >= s.start && t < s.start + s.dur);
       if (a) {
         const m = S.media.find((x) => x.id === a.mediaId);
-        if (m && m.beats && m.beats.length) return mk(sinceBeat(m.beats, a.off + (t - a.start)));
+        if (m && m.beats && m.beats.length) {
+          const info = sinceBeat(m.beats, a.off + (t - a.start));
+          return mk(info.since, info.idx);
+        }
       }
-      return mk(t % (60 / S.bpm));
+      const period = 60 / S.bpm;
+      return mk(t % period, Math.floor(t / period));
     }
 
     function drawCover(g, el, vw, vh, W, H) {
@@ -521,37 +1407,24 @@
       g.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
     }
 
-    function drawTransition(g, prev, cur, type, p, W, H) {
+    function drawVoxCard(g, W, H) {
+      const cw = W * 0.5, ch = H * 0.42;
       g.save();
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.filter = "none"; g.globalAlpha = 1;
-      g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
-      if (type === "whip") {
-        g.filter = `blur(${Math.round((1 - p) * 24)}px)`;
-        g.drawImage(prev, -p * W, 0, W, H);
-        g.drawImage(cur, (1 - p) * W, 0, W, H);
-      } else if (type === "smash") {
-        g.drawImage(prev, 0, 0, W, H);
-        const s = 1.6 - 0.6 * p;
-        g.globalAlpha = p;
-        g.translate(W / 2, H / 2); g.scale(s, s); g.translate(-W / 2, -H / 2);
-        g.drawImage(cur, 0, 0, W, H);
-      } else if (type === "flashW") {
-        g.drawImage(p < 0.5 ? prev : cur, 0, 0, W, H);
-        g.fillStyle = `rgba(255,255,255,${Math.sin(p * Math.PI)})`;
-        g.fillRect(0, 0, W, H);
-      } else if (type === "glitchCut") {
-        g.drawImage(prev, 0, 0, W, H);
-        const n = 24, seed = Math.floor(p * 12), h = H / n;
-        for (let i = 0; i < n; i++) {
-          if (i / n >= p) continue;
-          const dx = Math.sin(seed * 13 + i * 7.7) * W * 0.07;
-          g.drawImage(cur, 0, i * h, W, h, dx, i * h, W, h);
-        }
-      } else {
-        g.drawImage(prev, 0, 0, W, H);
-        g.globalAlpha = p;
-        g.drawImage(cur, 0, 0, W, H);
+      g.translate(W / 2, H / 2);
+      g.rotate(-0.055);
+      g.shadowColor = "rgba(0,0,0,0.55)";
+      g.shadowBlur = 30 * (H / 1080);
+      g.fillStyle = "#fbf7ee";
+      g.fillRect(-cw / 2, -ch / 2, cw, ch);
+      g.shadowBlur = 0;
+      g.fillStyle = "#111";
+      g.font = `bold ${H * 0.048}px Georgia, serif`;
+      g.textAlign = "center";
+      g.fillText("THE DAILY RECORD", 0, -ch * 0.3);
+      g.fillRect(-cw * 0.42, -ch * 0.22, cw * 0.84, 3);
+      for (let i = 0; i < 5; i++) {
+        g.fillStyle = "#333";
+        g.fillRect(-cw * 0.42, -ch * 0.1 + i * ch * 0.08, cw * 0.84 - (i % 2) * cw * 0.2, H * 0.008);
       }
       g.restore();
     }
@@ -560,7 +1433,8 @@
       const size = tx.size * (H / 1080);
       const cx = tx.x * W, cy = tx.y * H;
       const base = tx.text || "";
-      const txt = tx.preset === "hormozi" ? base.toUpperCase() : base;
+      const txt = (tx.preset === "hormozi" || tx.preset === "kinetic" || tx.preset === "scoreboard")
+        ? base.toUpperCase() : base;
       const shown = tx.preset === "typewriter"
         ? txt.slice(0, Math.floor(local * 18)) + (Math.floor(local * 4) % 2 ? "▌" : "")
         : txt;
@@ -568,14 +1442,18 @@
       g.font = tx.preset === "hormozi"
         ? `900 ${size}px Impact, "Arial Black", sans-serif`
         : tx.preset === "typewriter"
-          ? `bold ${size}px "Courier New", monospace`
-          : `800 ${size}px Inter, "Helvetica Neue", Arial, sans-serif`;
-      g.textAlign = "center"; g.textBaseline = "middle";
-      const w = g.measureText(txt).width + size * 0.6, h = size * 1.3;
+          ? `bold ${size}px "JetBrains Mono", "Courier New", monospace`
+          : tx.preset === "scoreboard"
+            ? `800 ${size}px "JetBrains Mono", "Outfit", monospace`
+            : `900 ${size}px Outfit, "Helvetica Neue", Arial, sans-serif`;
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      const w = g.measureText(txt).width + size * 0.7;
+      const h = size * 1.35;
       bounds.push({ id: tx.id, x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 });
 
       if (tx.preset === "highlight") {
-        const p = Math.min(1, local / 0.6);
+        const p = Math.min(1, local / 0.55);
         g.fillStyle = "#facc15";
         g.fillRect(cx - w / 2, cy - h * 0.25, w * p, h * 0.55);
         g.fillStyle = "#0b0b0b";
@@ -583,71 +1461,156 @@
       } else if (tx.preset === "hormozi") {
         const s = local < 0.12 ? 0.4 + 0.6 * (local / 0.12)
           : local < 0.2 ? 1.15 - 0.15 * ((local - 0.12) / 0.08) : 1;
-        g.translate(cx, cy); g.scale(s, s);
-        g.lineWidth = size / 6; g.strokeStyle = "#000";
+        g.translate(cx, cy);
+        g.scale(s, s);
+        g.lineWidth = size / 6;
+        g.strokeStyle = "#000";
         g.strokeText(shown, 0, 0);
-        g.fillStyle = "#fff"; g.fillText(shown, 0, 0);
+        g.fillStyle = "#fff";
+        g.fillText(shown, 0, 0);
+      } else if (tx.preset === "scoreboard") {
+        const pop = Math.min(1, local / 0.18);
+        const ease = 1 - Math.pow(1 - pop, 3);
+        g.translate(cx, cy);
+        g.scale(0.92 + 0.08 * ease, 0.92 + 0.08 * ease);
+        g.globalAlpha = ease;
+        g.fillStyle = "rgba(9, 13, 22, 0.86)";
+        g.strokeStyle = "rgba(56, 189, 248, 0.85)";
+        g.lineWidth = Math.max(2, size * 0.04);
+        g.beginPath();
+        g.roundRect(-w / 2, -h * 0.42, w, h * 0.84, size * 0.12);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#38bdf8";
+        g.fillRect(-w / 2, -h * 0.42, size * 0.16, h * 0.84);
+        g.fillStyle = "#f8fafc";
+        g.fillText(shown, 0, 0);
+      } else if (tx.preset === "kinetic") {
+        const p = Math.min(1, local / 0.24);
+        const ease = 1 - Math.pow(1 - p, 4);
+        const sc = 1.45 - 0.45 * ease;
+        g.translate(cx, cy);
+        g.scale(sc, sc);
+        g.globalAlpha = ease;
+        g.shadowColor = "rgba(0,0,0,0.9)";
+        g.shadowBlur = size * 0.35;
+        g.fillStyle = "#ffffff";
+        g.fillText(shown, 0, 0);
       } else if (tx.preset === "neon") {
         g.globalAlpha = Math.min(1, local * 3);
-        g.shadowColor = "#ff2bd6"; g.shadowBlur = size * 0.7;
-        g.fillStyle = "#fff5ff"; g.fillText(shown, cx, cy);
-        g.shadowColor = "#00f0ff"; g.shadowBlur = size * 0.25;
+        g.shadowColor = "#ff2bd6";
+        g.shadowBlur = size * 0.7;
+        g.fillStyle = "#fff5ff";
+        g.fillText(shown, cx, cy);
+        g.shadowColor = "#00f0ff";
+        g.shadowBlur = size * 0.25;
         g.fillText(shown, cx, cy);
       } else {
-        g.shadowColor = "rgba(0,0,0,0.8)"; g.shadowBlur = size * 0.25;
-        g.fillStyle = "#fff"; g.fillText(shown, cx, cy);
+        g.shadowColor = "rgba(0,0,0,0.85)";
+        g.shadowBlur = size * 0.25;
+        g.fillStyle = "#fff";
+        g.fillText(shown, cx, cy);
       }
       g.restore();
     }
 
-    function drawFrame(E, t) {
-      const cv = E.canvas;
-      if (!cv) return;
-      const g = cv.getContext("2d");
-      const W = cv.width, H = cv.height;
-      const { vSegs, media, bpm, texts } = E.S;
-      const src = offc(E, "src"), sg = src.getContext("2d");
+    function updateMediaPipeMask(E, srcCanvas, W, H, m, sourceTime) {
+      const maskCanvas = offc(E, "mask");
+      const mg = maskCanvas.getContext("2d");
 
-      const seg = vSegs.find((s) => t >= s.start && t < s.start + s.dur);
-      const segId = seg ? seg.id : null;
-      if (segId !== E.lastSeg) {
-        if (E.lastSeg !== null) offc(E, "prev").getContext("2d").drawImage(cv, 0, 0);
-        E.lastSeg = segId;
-      }
-
-      const st = seg ? seg.settings : DEFAULT_SETTINGS;
-      const fxs = seg ? seg.fx : {};
-      const gr = seg ? seg.grade : {};
-      const fxv = (k) => (fxs[k] || 0) / 100;
-      const local = seg ? t - seg.start : 0;
-
-      sg.setTransform(1, 0, 0, 1, 0, 0);
-      sg.fillStyle = "#000"; sg.fillRect(0, 0, W, H);
-      const m = seg && media.find((x) => x.id === seg.mediaId);
-      const bi = beatInfo(E.S, t);
-      if (m) {
-        const x = seg.off + local * st.speed;
-        const xw = warp(x, st.ramp, barLen(bpm) * 4);
-        if (m.kind === "proc") {
-          PROC_GENS[m.gen](sg, W, H, xw);
-        } else {
-          const el = E.els.get(m.id);
-          if (el && el.readyState >= 2) {
-            const native = E.play.playing && st.ramp === 0;
-            if (native) {
-              if (el.paused) el.play().catch(() => {});
-              el.playbackRate = clamp(st.speed, 0.25, 4);
-              if (Math.abs(el.currentTime - xw) > 0.35 && !el.seeking) el.currentTime = xw;
-            } else {
-              if (!el.paused) el.pause();
-              if (Math.abs(el.currentTime - xw) > 0.02 && !el.seeking) el.currentTime = xw;
+      // If MediaPipe is ready, run real ImageSegmenter on video or canvas
+      if (MP_STATE.segmenter) {
+        const now = performance.now();
+        // Run segmentation when source time shifts or > 24ms elapsed
+        if (Math.abs(sourceTime - MP_STATE.lastVideoTime) > 0.015 || m.id !== MP_STATE.lastMediaId || now - MP_STATE.lastRunAt > 30) {
+          const tsMs = Math.max(MP_STATE.lastRunAt + 1, Math.round(now));
+          MP_STATE.lastRunAt = tsMs;
+          MP_STATE.lastVideoTime = sourceTime;
+          MP_STATE.lastMediaId = m.id;
+          try {
+            const res = MP_STATE.segmenter.segmentForVideo(srcCanvas, tsMs);
+            const conf = res?.confidenceMasks?.[0];
+            if (conf) {
+              const mw = conf.width, mh = conf.height;
+              const arr = conf.getAsFloat32Array();
+              const tmpM = offc(E, "mpTmp");
+              if (tmpM.width !== mw || tmpM.height !== mh) { tmpM.width = mw; tmpM.height = mh; }
+              const tg = tmpM.getContext("2d");
+              const imgData = tg.createImageData(mw, mh);
+              const d = imgData.data;
+              for (let i = 0, p = 0; i < arr.length; i++, p += 4) {
+                const v = clamp(Math.round(arr[i] * 255), 0, 255);
+                d[p] = v; d[p + 1] = v; d[p + 2] = v; d[p + 3] = 255;
+              }
+              tg.putImageData(imgData, 0, 0);
+              mg.clearRect(0, 0, W, H);
+              mg.drawImage(tmpM, 0, 0, W, H);
+              conf.close?.();
             }
-            drawCover(sg, el, el.videoWidth, el.videoHeight, W, H);
+            res?.close?.();
+            return;
+          } catch (_) {
+            // fall through to heuristic edge mask
           }
+        } else {
+          return; // reuse cached maskCanvas
         }
       }
-      E.els.forEach((el, id) => { if (!(m && m.id === id) && !el.paused) el.pause(); });
 
+      // Fallback luminance/center subject heuristic while CDN WASM initializes or on offline procedural demos
+      const sm = offc(E, "small");
+      const smg = sm.getContext("2d");
+      smg.drawImage(srcCanvas, 0, 0, sm.width, sm.height);
+      const idata = smg.getImageData(0, 0, sm.width, sm.height);
+      const d = idata.data;
+      for (let y = 0; y < sm.height; y++) {
+        for (let x = 0; x < sm.width; x++) {
+          const i = (y * sm.width + x) * 4;
+          const lum = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+          const dx = (x / sm.width - 0.5) * 1.6;
+          const dy = (y / sm.height - 0.52) * 1.4;
+          const radial = Math.max(0, 1 - (dx * dx + dy * dy));
+          const val = clamp((lum * 0.65 + radial * 0.65 - 0.25) * 2.2, 0, 1) * 255;
+          d[i] = val; d[i + 1] = val; d[i + 2] = val; d[i + 3] = 255;
+        }
+      }
+      smg.putImageData(idata, 0, 0);
+      mg.clearRect(0, 0, W, H);
+      mg.drawImage(sm, 0, 0, W, H);
+    }
+
+    /* Computes reverse / ping-pong / cubic-bezier warped source timestamp */
+    function computeSourceTime(seg, local, st, bpm, bi) {
+      const segDur = seg.dur;
+      let dir = st.reverse ? -1 : 1;
+      if (st.pingPong) {
+        // Flip playback direction on every 2nd beat / snare hit
+        if (bi.idx % 2 === 1) dir *= -1;
+      }
+      let x;
+      if (dir > 0) {
+        x = seg.off + local * st.speed;
+      } else {
+        // Reverse within clip window, ping-ponging cleanly on beat sub-intervals
+        if (st.pingPong) {
+          const beatDur = 60 / bpm;
+          const inBeat = local % (beatDur * 2);
+          const pingT = inBeat < beatDur ? inBeat : (beatDur * 2 - inBeat);
+          const base = seg.off + Math.floor(local / (beatDur * 2)) * (beatDur * 0.85) * st.speed;
+          x = base + pingT * st.speed;
+        } else {
+          x = seg.off + segDur * st.speed - local * st.speed;
+        }
+      }
+      const xw = warp(Math.max(0, x), st.ramp, barLen(bpm) * 4);
+      return Math.max(0, xw);
+    }
+
+    /* Canvas 2D Fallback (only used if WebGL is completely unsupported) */
+    function drawFrame2DFallback(E, t, src, behindCanvas, frontCanvas, seg, st, fxs, gr, bi, local, W, H) {
+      const cv = E.canvas;
+      const g = cv.getContext("2d");
+      const fxv = (k) => (fxs[k] || 0) / 100;
       const shakeAmp = (st.shake / 100) * 28 + fxv("shake") * 32;
       const decay = Math.exp(-bi.since * 9);
       const dx = Math.sin(t * 67) * shakeAmp * decay;
@@ -660,127 +1623,322 @@
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.filter = `contrast(${st.contrast}%) saturate(${st.sat}%)${st.blur > 0 ? ` blur(${(st.blur / 12).toFixed(2)}px)` : ""}`;
-      g.translate(W / 2 + dx, H / 2 + dy); g.scale(sc, sc); g.translate(-W / 2, -H / 2);
+      g.translate(W / 2 + dx, H / 2 + dy);
+      g.scale(sc, sc);
+      g.translate(-W / 2, -H / 2);
       g.drawImage(src, 0, 0, W, H);
       g.restore();
       g.filter = "none";
-
-      if (seg && seg.trans) {
-        const p = local / seg.trans.dur;
-        if (p >= 0 && p < 1) {
-          const cur = offc(E, "cur");
-          cur.getContext("2d").drawImage(cv, 0, 0);
-          drawTransition(g, offc(E, "prev"), cur, seg.trans.id, p, W, H);
-        }
-      }
-
-      const rgb = st.rgb / 100 + fxv("rgb");
-      const glow = st.glow / 100 + fxv("glow");
-      const needCopy = rgb > 0 || fxv("glitch") > 0 || fxv("kaleido") > 0 || fxv("radial") > 0;
-      const tmp = offc(E, "tmp");
-      if (needCopy) tmp.getContext("2d").drawImage(cv, 0, 0);
-
-      if (rgb > 0) {
-        g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.25 * Math.min(1, rgb);
-        const d = rgb * 16;
-        g.drawImage(tmp, d, 0); g.drawImage(tmp, -d, 0);
-        g.restore();
-      }
-      if (glow > 0) {
-        const sm = offc(E, "small");
-        sm.getContext("2d").drawImage(cv, 0, 0, sm.width, sm.height);
-        g.save(); g.globalCompositeOperation = "lighter";
-        g.globalAlpha = Math.min(0.8, glow * 0.6); g.filter = "blur(6px)";
-        g.drawImage(sm, 0, 0, W, H);
-        g.restore(); g.filter = "none";
-      }
-      if (fxv("glitch") > 0) {
-        const amt = fxv("glitch"), seed = Math.floor(t * 12);
-        for (let i = 0; i < 10; i++) {
-          const r = Math.abs(Math.sin(seed * 91.7 + i * 17.3));
-          if (r > 0.5 + (1 - amt) * 0.4) continue;
-          const y = Math.floor(r * H);
-          const h = Math.floor(H * 0.04 + ((Math.sin(seed + i) + 1) * H) * 0.02);
-          const sx = Math.sin(seed * 3.1 + i * 5.9) * W * 0.06 * amt;
-          g.drawImage(tmp, 0, y, W, h, sx, y, W, h);
-        }
-      }
-      if (fxv("kaleido") > 0) {
-        g.save(); g.globalAlpha = fxv("kaleido");
-        g.translate(W, 0); g.scale(-1, 1);
-        g.drawImage(tmp, 0, 0, W / 2, H, 0, 0, W / 2, H);
-        g.restore();
-      }
-      if (fxv("radial") > 0) {
-        g.save(); g.globalAlpha = 0.18 * fxv("radial");
-        for (let i = 1; i <= 3; i++) {
-          g.save();
-          g.translate(W / 2, H / 2); g.scale(1 + 0.03 * i * fxv("radial"), 1 + 0.03 * i * fxv("radial"));
-          g.translate(-W / 2, -H / 2);
-          g.drawImage(tmp, 0, 0, W, H);
-          g.restore();
-        }
-        g.restore();
-      }
-      if (gr.tealOrange) {
-        g.save(); g.globalCompositeOperation = "overlay"; g.globalAlpha = 0.5;
-        const gg = g.createLinearGradient(0, 0, W, H);
-        gg.addColorStop(0, "#0a7f8c"); gg.addColorStop(1, "#ff8a2a");
-        g.fillStyle = gg; g.fillRect(0, 0, W, H); g.restore();
-      }
-      if (gr.paper) {
-        g.save(); g.globalCompositeOperation = "multiply"; g.globalAlpha = 0.55;
-        g.fillStyle = "#f1e3c0"; g.fillRect(0, 0, W, H); g.restore();
-      }
-      const flash = fxv("flash") * Math.pow(bi.env, 3);
-      if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash * 0.8})`; g.fillRect(0, 0, W, H); }
-      if (fxv("strobe") > 0 && (t * (bpm / 60) * 2) % 1 < 0.12) {
-        g.fillStyle = `rgba(255,255,255,${0.55 * fxv("strobe")})`; g.fillRect(0, 0, W, H);
-      }
-      if (fxv("grain") > 0) {
-        const a = fxv("grain");
-        g.save();
-        g.fillStyle = `rgba(255,255,255,${0.1 * a})`;
-        for (let i = 0; i < 260; i++) g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
-        g.fillStyle = `rgba(0,0,0,${0.1 * a})`;
-        for (let i = 0; i < 260; i++) g.fillRect(Math.random() * W, Math.random() * H, 2, 2);
-        g.restore();
-      }
-      if (fxv("scan") > 0) {
-        g.fillStyle = `rgba(0,0,0,${0.5 * fxv("scan")})`;
-        for (let y = 0; y < H; y += 4) g.fillRect(0, y, W, 2);
-      }
-      if (fxv("vignette") > 0) {
-        const gr2 = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.7);
-        gr2.addColorStop(0, "rgba(0,0,0,0)");
-        gr2.addColorStop(1, `rgba(0,0,0,${0.85 * fxv("vignette")})`);
-        g.fillStyle = gr2; g.fillRect(0, 0, W, H);
-      }
-      if (gr.card) {
-        const cw = W * 0.5, ch = H * 0.42;
-        g.save(); g.translate(W / 2, H / 2); g.rotate(-0.05);
-        g.shadowColor = "rgba(0,0,0,0.6)"; g.shadowBlur = 30;
-        g.fillStyle = "#fbf7ee"; g.fillRect(-cw / 2, -ch / 2, cw, ch);
-        g.shadowBlur = 0;
-        g.fillStyle = "#111"; g.font = `bold ${H * 0.05}px Georgia, serif`; g.textAlign = "center";
-        g.fillText("THE DAILY FACT", 0, -ch * 0.3);
-        g.fillRect(-cw * 0.42, -ch * 0.22, cw * 0.84, 3);
-        for (let i = 0; i < 5; i++) {
-          g.fillStyle = "#333";
-          g.fillRect(-cw * 0.42, -ch * 0.1 + i * ch * 0.08, cw * 0.84 - (i % 2) * cw * 0.2, H * 0.008);
-        }
-        g.restore();
-      }
+      g.drawImage(behindCanvas, 0, 0, W, H);
       if (gr.letterbox) {
         const bar = Math.max(0, (H - W / 2.39) / 2);
-        g.fillStyle = "#000"; g.fillRect(0, 0, W, bar); g.fillRect(0, H - bar, W, bar);
+        g.fillStyle = "#000";
+        g.fillRect(0, 0, W, bar);
+        g.fillRect(0, H - bar, W, bar);
       }
+      g.drawImage(frontCanvas, 0, 0, W, H);
+    }
+
+    function bindQuad(gl, prog, quad) {
+      gl.useProgram(prog.p);
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.enableVertexAttribArray(prog.aPos);
+      gl.vertexAttribPointer(prog.aPos, 2, gl.FLOAT, false, 0, 0);
+    }
+
+    function bindTex(gl, unit, tex, loc) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      if (loc !== undefined && loc !== null) gl.uniform1i(loc, unit);
+    }
+
+    function drawFrame(E, t) {
+      const cv = E.canvas;
+      if (!cv) return;
+      const W = cv.width, H = cv.height;
+      const { vSegs, media, bpm, texts } = E.S;
+      const src = offc(E, "src"), sg = src.getContext("2d");
+
+      const seg = vSegs.find((s) => t >= s.start && t < s.start + s.dur);
+      const segId = seg ? seg.id : null;
+      if (segId !== E.lastSeg) {
+        if (E.lastSeg !== null && E.glState) {
+          // GPU-to-GPU snapshot of previous clip frame preserving WebGL bottom-up orientation
+          const { gl, texs } = E.glState;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+          gl.bindTexture(gl.TEXTURE_2D, texs.prevClip);
+          gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, W, H, 0);
+        } else if (E.lastSeg !== null && !E.useWebGL) {
+          offc(E, "prev").getContext("2d").drawImage(cv, 0, 0);
+        }
+        E.lastSeg = segId;
+        E.frameBuf.segId = segId;
+        E.frameBuf.hasPrev = false;
+      }
+
+      const st = seg ? { ...DEFAULT_SETTINGS, ...seg.settings } : DEFAULT_SETTINGS;
+      const fxs = seg ? seg.fx : {};
+      const gr = seg ? seg.grade : {};
+      const fxv = (k) => (fxs[k] || 0) / 100;
+      const local = seg ? t - seg.start : 0;
+      const bi = beatInfo(E.S, t);
+
+      sg.setTransform(1, 0, 0, 1, 0, 0);
+      sg.fillStyle = "#000";
+      sg.fillRect(0, 0, W, H);
+
+      const m = seg && media.find((x) => x.id === seg.mediaId);
+      let xw = 0;
+      let frameBlend = 0;
+      const prevFrameCanvas = offc(E, "prevFrame");
+      const pfg = prevFrameCanvas.getContext("2d");
+
+      if (m) {
+        xw = computeSourceTime(seg, local, st, bpm, bi);
+        const twixtorActive = st.twixtor || st.speed < 0.98;
+
+        if (m.kind === "proc") {
+          if (twixtorActive) {
+            const dt = 1 / 30;
+            PROC_GENS[m.gen](pfg, W, H, Math.max(0, xw - dt));
+            PROC_GENS[m.gen](sg, W, H, xw);
+            frameBlend = (xw * 30) % 1;
+            E.frameBuf.hasPrev = true;
+          } else {
+            PROC_GENS[m.gen](sg, W, H, xw);
+          }
+        } else {
+          const el = E.els.get(m.id);
+          if (el && el.readyState >= 2) {
+            const clampedT = clamp(xw, 0, Math.max(0.01, (el.duration || m.duration) - 0.02));
+            const isForwardNative = E.play.playing && st.ramp === 0 && !st.reverse && !st.pingPong;
+            if (isForwardNative) {
+              if (el.paused) el.play().catch(() => {});
+              el.playbackRate = clamp(st.speed, 0.25, 4);
+              if (Math.abs(el.currentTime - clampedT) > 0.35 && !el.seeking) el.currentTime = clampedT;
+            } else {
+              if (!el.paused) el.pause();
+              if (Math.abs(el.currentTime - clampedT) > 0.018 && !el.seeking) el.currentTime = clampedT;
+            }
+
+            // Twixtor optical frame tracking: snapshot previous decoded video frame whenever currentTime advances
+            const curVidT = el.currentTime;
+            const nowMs = performance.now();
+            if (twixtorActive) {
+              if (Math.abs(curVidT - E.frameBuf.lastSrcT) > 0.004) {
+                if (E.frameBuf.lastSrcT >= 0) {
+                  pfg.drawImage(src, 0, 0, W, H);
+                  E.frameBuf.hasPrev = true;
+                }
+                const deltaMs = nowMs - E.frameBuf.lastDrawMs;
+                if (deltaMs > 8 && deltaMs < 500) {
+                  E.frameBuf.frameIntervalMs = E.frameBuf.frameIntervalMs * 0.7 + deltaMs * 0.3;
+                }
+                E.frameBuf.prevSrcT = E.frameBuf.lastSrcT;
+                E.frameBuf.lastSrcT = curVidT;
+                E.frameBuf.lastDrawMs = nowMs;
+              }
+              if (E.frameBuf.hasPrev) {
+                frameBlend = clamp((nowMs - E.frameBuf.lastDrawMs) / Math.max(16, E.frameBuf.frameIntervalMs), 0.05, 0.95);
+              }
+            }
+            drawCover(sg, el, el.videoWidth, el.videoHeight, W, H);
+          }
+        }
+      }
+      E.els.forEach((el, id) => { if (!(m && m.id === id) && !el.paused) el.pause(); });
+
+      // Update AI Cutout mask if enabled on this clip
+      if (st.cutout && m) {
+        updateMediaPipeMask(E, src, W, H, m, xw);
+      }
+
+      // Render Behind-Subject & Front text canvases
+      const behindCanvas = offc(E, "behind"), bg = behindCanvas.getContext("2d");
+      const frontCanvas = offc(E, "front"), fg = frontCanvas.getContext("2d");
+      bg.clearRect(0, 0, W, H);
+      fg.clearRect(0, 0, W, H);
+
+      if (gr.card) drawVoxCard(fg, W, H);
 
       E.bounds = [];
       for (const tx of texts) {
         if (t < tx.start || t >= tx.start + tx.dur) continue;
-        drawText(g, tx, t - tx.start, W, H, E.bounds);
+        const targetG = tx.layer === "behind" ? bg : fg;
+        drawText(targetG, tx, t - tx.start, W, H, E.bounds);
       }
+
+      if (!E.useWebGL || !E.glState) {
+        drawFrame2DFallback(E, t, src, behindCanvas, frontCanvas, seg, st, fxs, gr, bi, local, W, H);
+        return;
+      }
+
+      // ================= GPU WEBGL MULTI-PASS PIPELINE =================
+      const { gl, quad, progs, texs, fbos } = E.glState;
+      const asp = W / H;
+
+      // Upload source textures
+      gl.bindTexture(gl.TEXTURE_2D, texs.curr);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+
+      if ((st.twixtor || st.speed < 0.98) && E.frameBuf.hasPrev) {
+        gl.bindTexture(gl.TEXTURE_2D, texs.prevFrame);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevFrameCanvas);
+      }
+      if (st.cutout) {
+        gl.bindTexture(gl.TEXTURE_2D, texs.mask);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offc(E, "mask"));
+      }
+      gl.bindTexture(gl.TEXTURE_2D, texs.behind);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, behindCanvas);
+
+      gl.bindTexture(gl.TEXTURE_2D, texs.front);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frontCanvas);
+
+      // Compute Camera, Shake, 3D Tilt, Blur & RGB uniforms
+      const shakeAmp = (st.shake / 100) * 0.045 + fxv("shake") * 0.055;
+      const decay = Math.exp(-bi.since * 9);
+      const dx = (Math.sin(t * 67) * 0.75 + Math.cos(t * 113) * 0.25) * shakeAmp * decay;
+      const dy = (Math.cos(t * 53) * 0.75 + Math.sin(t * 89) * 0.25) * shakeAmp * decay * 0.65;
+
+      const kfVal = seg && seg.kfs.length ? kfZoom(seg.kfs, local) : null;
+      const zoomVal = kfVal !== null ? kfVal : st.zoom;
+      let sc = 1.0 + (zoomVal / 100) * 0.45 + fxv("bassZoom") * 0.26 * bi.env;
+      if (gr.kenburns && seg) sc += 0.1 * (local / seg.dur);
+
+      const rotZ = (st.shake / 100 + fxv("shake")) * 0.055 * Math.sin(t * 41) * decay;
+      const tiltAmt = (st.tilt3d || 0) / 100;
+      const tiltX = tiltAmt * 0.28 * Math.sin(t * 2.4 + bi.env * 1.2);
+      const tiltY = tiltAmt * 0.18 * Math.cos(t * 1.9);
+
+      const velDx = dx - E.prevMotion.dx;
+      const velDy = dy - E.prevMotion.dy;
+      const velSc = sc - E.prevMotion.sc;
+      E.prevMotion = { dx, dy, sc };
+
+      const dirBlurStrength = st.blur / 100;
+      const blurVelX = clamp(velDx * 1.8 + Math.cos(t * 41) * dirBlurStrength * 0.018 * decay, -0.06, 0.06);
+      const blurVelY = clamp(velDy * 1.8 + Math.sin(t * 41) * dirBlurStrength * 0.018 * decay, -0.06, 0.06);
+      const radialBlur = fxv("radial") * 0.85 + dirBlurStrength * 0.4 + Math.abs(velSc) * 1.5;
+
+      const rgbAmt = st.rgb / 100 + fxv("rgb") + bi.env * (fxv("rgb") * 0.55);
+      const glowAmt = st.glow / 100 + fxv("glow");
+      const moodyAmt = Math.max(st.moodyCC / 100, fxv("moodyCC"));
+      const flashAmt = fxv("flash") * Math.pow(bi.env, 2.8);
+      const strobeAmt = fxv("strobe") > 0 && ((t * (bpm / 60) * 2) % 1) < 0.12 ? fxv("strobe") : 0;
+
+      // ---------- PASS 1: Twixtor Frame Blend + AI Cutout + Behind Text + Neon Aura -> fboA ----------
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.fboA.fb);
+      gl.viewport(0, 0, W, H);
+      bindQuad(gl, progs.pass1, quad);
+      bindTex(gl, 0, texs.curr, progs.pass1.locs.uTexCurr);
+      bindTex(gl, 1, texs.prevFrame, progs.pass1.locs.uTexPrev);
+      bindTex(gl, 2, texs.mask, progs.pass1.locs.uTexMask);
+      bindTex(gl, 3, texs.behind, progs.pass1.locs.uTexBehind);
+      gl.uniform1f(progs.pass1.locs.uFrameBlend, frameBlend);
+      gl.uniform1f(progs.pass1.locs.uTwixtor, (st.twixtor || st.speed < 0.98) && E.frameBuf.hasPrev ? 1.0 : 0.0);
+      gl.uniform1f(progs.pass1.locs.uCutout, st.cutout ? 1.0 : 0.0);
+      gl.uniform1f(progs.pass1.locs.uAuraStrength, st.cutout ? (st.aura / 100) * (1.0 + 0.35 * bi.env) : 0.0);
+      const [ar, ag, ab] = hexToRgbNorm(st.auraColor);
+      gl.uniform3f(progs.pass1.locs.uAuraColor, ar, ag, ab);
+      gl.uniform2f(progs.pass1.locs.uTexel, 1 / W, 1 / H);
+      gl.uniform1f(progs.pass1.locs.uFlipY, 1.0);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // ---------- PASS 2: Mirrored-Edge 3D Camera + Motion Blur + Per-Channel RGB -> fboB ----------
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.fboB.fb);
+      gl.viewport(0, 0, W, H);
+      bindQuad(gl, progs.pass2, quad);
+      bindTex(gl, 0, fbos.fboA.tex, progs.pass2.locs.uTex);
+      gl.uniform1f(progs.pass2.locs.uAspect, asp);
+      gl.uniform1f(progs.pass2.locs.uZoom, sc);
+      gl.uniform2f(progs.pass2.locs.uShakeOffset, dx, dy);
+      gl.uniform1f(progs.pass2.locs.uRotZ, rotZ);
+      gl.uniform2f(progs.pass2.locs.uTilt, tiltX, tiltY);
+      gl.uniform2f(progs.pass2.locs.uBlurVel, blurVelX, blurVelY);
+      gl.uniform1f(progs.pass2.locs.uRadialBlur, radialBlur);
+      gl.uniform1f(progs.pass2.locs.uRgbAmt, rgbAmt);
+      gl.uniform2f(progs.pass2.locs.uRgbDir, Math.sign(dx || 1) * 0.45, Math.sign(dy || 0) * 0.25);
+      gl.uniform1f(progs.pass2.locs.uGlitch, fxv("glitch"));
+      gl.uniform1f(progs.pass2.locs.uKaleido, fxv("kaleido"));
+      gl.uniform1f(progs.pass2.locs.uTime, t);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      // ---------- PASS 3: Sapphire-Style HDR Threshold Bloom (only when glow > 0) ----------
+      if (glowAmt > 0.005) {
+        const bw = fbos.bloomA.w, bh = fbos.bloomA.h;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.bloomA.fb);
+        gl.viewport(0, 0, bw, bh);
+        bindQuad(gl, progs.bright, quad);
+        bindTex(gl, 0, fbos.fboB.tex, progs.bright.locs.uTex);
+        gl.uniform1f(progs.bright.locs.uThreshold, clamp(st.glowThreshold ?? 0.62, 0.2, 0.95));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Separable Blur H -> bloomB
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.bloomB.fb);
+        bindQuad(gl, progs.blur, quad);
+        bindTex(gl, 0, fbos.bloomA.tex, progs.blur.locs.uTex);
+        gl.uniform2f(progs.blur.locs.uDir, 2.2 / bw, 0.0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Separable Blur V -> bloomA
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.bloomA.fb);
+        bindTex(gl, 0, fbos.bloomB.tex, progs.blur.locs.uTex);
+        gl.uniform2f(progs.blur.locs.uDir, 0.0, 2.2 / bh);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Second wide halo pass
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.bloomB.fb);
+        bindTex(gl, 0, fbos.bloomA.tex, progs.blur.locs.uTex);
+        gl.uniform2f(progs.blur.locs.uDir, 4.0 / bw, 0.0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbos.bloomA.fb);
+        bindTex(gl, 0, fbos.bloomB.tex, progs.blur.locs.uTex);
+        gl.uniform2f(progs.blur.locs.uDir, 0.0, 4.0 / bh);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      // ---------- PASS 4: Final Composite + Transitions + Dark Moody CC + Front Text -> Screen ----------
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, W, H);
+      bindQuad(gl, progs.final, quad);
+      bindTex(gl, 0, fbos.fboB.tex, progs.final.locs.uTexScene);
+      bindTex(gl, 1, fbos.bloomA.tex, progs.final.locs.uTexBloom);
+      bindTex(gl, 2, texs.prevClip, progs.final.locs.uTexPrevClip);
+      bindTex(gl, 3, texs.front, progs.final.locs.uTexFront);
+
+      let transType = 0;
+      let transProg = 1;
+      if (seg && seg.trans) {
+        const p = local / seg.trans.dur;
+        if (p >= 0 && p < 1) {
+          transProg = p;
+          transType = seg.trans.id === "dissolve" ? 1
+            : seg.trans.id === "whip" ? 2
+            : seg.trans.id === "smash" ? 3
+            : seg.trans.id === "flashW" ? 4
+            : seg.trans.id === "glitchCut" ? 5 : 1;
+        }
+      }
+      gl.uniform1f(progs.final.locs.uTransType, transType);
+      gl.uniform1f(progs.final.locs.uTransProg, transProg);
+      gl.uniform1f(progs.final.locs.uGlowAmt, glowAmt * 1.45);
+      gl.uniform1f(progs.final.locs.uContrast, st.contrast / 100);
+      gl.uniform1f(progs.final.locs.uSat, st.sat / 100);
+      gl.uniform1f(progs.final.locs.uMoodyCC, moodyAmt);
+      gl.uniform1f(progs.final.locs.uCrush, (st.crushBlacks || 0) / 100);
+      gl.uniform1f(progs.final.locs.uTealOrange, gr.tealOrange ? 1.0 : 0.0);
+      gl.uniform1f(progs.final.locs.uPaper, gr.paper ? 1.0 : 0.0);
+      gl.uniform1f(progs.final.locs.uFlash, flashAmt);
+      gl.uniform1f(progs.final.locs.uStrobe, strobeAmt);
+      gl.uniform1f(progs.final.locs.uGrain, fxv("grain"));
+      gl.uniform1f(progs.final.locs.uScan, fxv("scan"));
+      gl.uniform1f(progs.final.locs.uVignette, fxv("vignette"));
+      gl.uniform1f(progs.final.locs.uLetterbox, gr.letterbox ? 1.0 : 0.0);
+      gl.uniform1f(progs.final.locs.uAspect, asp);
+      gl.uniform1f(progs.final.locs.uTime, t);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
 
     function drawWave(E) {
@@ -789,7 +1947,9 @@
       const g = c.getContext("2d");
       const W = c.width, H = c.height;
       g.clearRect(0, 0, W, H);
-      g.strokeStyle = "#22d3ee"; g.lineWidth = 2; g.beginPath();
+      g.strokeStyle = "#22d3ee";
+      g.lineWidth = 2;
+      g.beginPath();
       if (E.an && E.play.playing) {
         const buf = new Uint8Array(E.an.fftSize);
         E.an.getByteTimeDomainData(buf);
@@ -798,13 +1958,14 @@
           i === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
         }
       } else {
-        g.moveTo(0, H / 2); g.lineTo(W, H / 2);
+        g.moveTo(0, H / 2);
+        g.lineTo(W, H / 2);
       }
       g.stroke();
     }
 
     function stopNodes(E) {
-      E.nodes.forEach((n) => { try { n.stop(); } catch (_) { /* already ended */ } });
+      E.nodes.forEach((n) => { try { n.stop(); } catch (_) {} });
       E.nodes = [];
     }
 
@@ -821,7 +1982,8 @@
         const src = c.createBufferSource();
         src.buffer = m.buffer;
         const gain = c.createGain();
-        src.connect(gain); gain.connect(E.master);
+        src.connect(gain);
+        gain.connect(E.master);
         if (E.dest) gain.connect(E.dest);
         src.start(c.currentTime + Math.max(0, seg.start - from), off, Math.max(0.01, seg.dur - into));
         E.nodes.push(src);
@@ -870,7 +2032,7 @@
       }
       drawWave(E);
       if (E.exporting) E.setExportPct(Math.round((E.tl / E.S.duration) * 100));
-      if (++E.frame % 4 === 0 || !E.play.playing) E.setUi(E.tl);
+      if (++E.frame % 3 === 0 || !E.play.playing) E.setUi(E.tl);
     }
 
     function teardown(E) {
@@ -881,18 +2043,40 @@
       E.vAudio.clear();
       E.urls.forEach((u) => URL.revokeObjectURL(u));
       E.urls.clear();
-      if (E.rec && E.rec.state !== "inactive") { try { E.rec.stop(); } catch (_) { /* noop */ } }
+      if (E.rec && E.rec.state !== "inactive") { try { E.rec.stop(); } catch (_) {} }
       if (E.ctx) E.ctx.close().catch(() => {});
       E.ctx = null;
     }
 
+    /* ============================ GEMINI 2.5 FLASH + HINGLISH AI DIRECTOR ============================ */
+
     async function askGemini(key, prompt) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
-      const sys = `You are an AI video editing director. Reply with ONLY compact JSON, no markdown. Schema: {"settings":{"zoom":0-100,"shake":0-100,"blur":0-100,"glow":0-100,"rgb":0-100,"contrast":50-200,"sat":0-200,"speed":0.25-2,"ramp":0-1},"fx":{"<effectId>":0-100},"grade":{"letterbox":bool,"tealOrange":bool,"paper":bool,"card":bool,"kenburns":bool},"texts":[{"text":"string","preset":"highlight|hormozi|typewriter|neon"}],"label":"short name"}. Valid effect ids: ${EFFECTS.map((e) => e.id).join(", ")}.`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+      const sys = `You are a viral After Effects & CapCut AI Video Editing Director (like Parth Edits, Slayer Edits, Wizard Edits, and Vox Documentary). Understand ANY natural language or Hinglish prompt (e.g., "bhai football edit bana slow mo aur text player ke piche", "hardcore phonk shake tez", "anime velocity glow"). Reply with ONLY compact valid JSON, no markdown.
+Schema:
+{
+  "settings": {
+    "zoom": 0-100, "shake": 0-100, "blur": 0-100, "glow": 0-100, "glowThreshold": 0.35-0.9,
+    "rgb": 0-100, "tilt3d": 0-100, "moodyCC": 0-100, "crushBlacks": 0-100,
+    "contrast": 50-200, "sat": 0-200, "speed": 0.25-2.0, "ramp": 0-1,
+    "twixtor": bool, "reverse": bool, "pingPong": bool, "cutout": bool, "aura": 0-100, "auraColor": "#hex"
+  },
+  "fx": { "<effectId>": 0-100 },
+  "grade": { "letterbox": bool, "tealOrange": bool, "paper": bool, "card": bool, "kenburns": bool },
+  "trans": { "id": "whip|smash|flashW|glitchCut|dissolve", "dur": 0.25-0.8 } | null,
+  "splitOnBeats": bool,
+  "texts": [{ "text": "string", "preset": "scoreboard|kinetic|highlight|hormozi|typewriter|neon", "layer": "behind|front" }],
+  "label": "short descriptive style name"
+}
+Valid effectIds: ${EFFECTS.map((e) => e.id).join(", ")}.`;
+
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: `${sys}\nUser request: ${prompt}` }] }] }),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${sys}\nUser prompt: ${prompt}` }] }],
+          generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+        }),
       });
       if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
       const data = await res.json();
@@ -902,11 +2086,28 @@
 
     function sanitizeAI(r) {
       const num = (v, d, a, b) => clamp(typeof v === "number" ? v : d, a, b);
+      const bool = (v, d = false) => (typeof v === "boolean" ? v : d);
       const s = r.settings || {};
       const settings = {
-        zoom: num(s.zoom, 0, 0, 100), shake: num(s.shake, 0, 0, 100), blur: num(s.blur, 0, 0, 100),
-        glow: num(s.glow, 0, 0, 100), rgb: num(s.rgb, 0, 0, 100), contrast: num(s.contrast, 100, 50, 200),
-        sat: num(s.sat, 100, 0, 200), speed: num(s.speed, 1, 0.25, 2), ramp: num(s.ramp, 0, 0, 1),
+        zoom: num(s.zoom, 0, 0, 100),
+        shake: num(s.shake, 0, 0, 100),
+        blur: num(s.blur, 0, 0, 100),
+        glow: num(s.glow, 0, 0, 100),
+        glowThreshold: num(s.glowThreshold, 0.62, 0.3, 0.92),
+        rgb: num(s.rgb, 0, 0, 100),
+        tilt3d: num(s.tilt3d, 0, 0, 100),
+        moodyCC: num(s.moodyCC, 0, 0, 100),
+        crushBlacks: num(s.crushBlacks, 0, 0, 100),
+        contrast: num(s.contrast, 100, 50, 200),
+        sat: num(s.sat, 100, 0, 200),
+        speed: num(s.speed, 1, 0.25, 2),
+        ramp: num(s.ramp, 0, 0, 1),
+        twixtor: bool(s.twixtor, false),
+        reverse: bool(s.reverse, false),
+        pingPong: bool(s.pingPong, false),
+        cutout: bool(s.cutout, false),
+        aura: num(s.aura, 45, 0, 100),
+        auraColor: typeof s.auraColor === "string" && /^#[0-9a-fA-F]{6}$/.test(s.auraColor) ? s.auraColor : "#22d3ee",
       };
       const fx = {};
       Object.entries(r.fx || {}).forEach(([k, v]) => {
@@ -914,102 +2115,156 @@
       });
       const grade = {};
       Object.entries(r.grade || {}).forEach(([k, v]) => { if (typeof v === "boolean") grade[k] = v; });
-      const texts = (r.texts || []).slice(0, 4).map((t) => ({
+      const trans = r.trans && TRANSITIONS.some((t) => t.id === r.trans.id)
+        ? { id: r.trans.id, dur: num(r.trans.dur, 0.45, 0.2, 1.2) }
+        : null;
+      const texts = (r.texts || []).slice(0, 4).map((t, i) => ({
         text: String(t.text || "").slice(0, 60),
-        preset: PRESETS.some((p) => p.id === t.preset) ? t.preset : "highlight",
+        preset: PRESETS.some((p) => p.id === t.preset) ? t.preset : "kinetic",
+        layer: t.layer === "behind" ? "behind" : "front",
+        x: 0.5,
+        y: t.layer === "behind" ? 0.42 - i * 0.1 : 0.8 - i * 0.12,
       }));
-      return { settings, fx, grade, texts, label: String(r.label || "AI Director") };
+      return { settings, fx, grade, trans, splitOnBeats: !!r.splitOnBeats, texts, label: String(r.label || "Gemini 2.5 Director") };
     }
 
+    /* Smart English + Hinglish offline parser */
     function parsePrompt(text) {
       const p = text.toLowerCase();
       const has = (...w) => w.some((x) => p.includes(x));
-      const k = has("heavy", "intense", "extreme", "hard", "max", "hardcore") ? 1
-        : has("subtle", "light", "gentle", "soft", "clean") ? 0.4 : 0.7;
-      const key = has("amv", "phonk") ? "amv"
-        : has("documentary", "vox", "explain", "newspaper") ? "doc"
-        : has("anime", "velocity") ? "anime"
+      const k = has("heavy", "intense", "extreme", "hard", "max", "hardcore", "khatarnak", "tez", "zyada", "bahut") ? 1
+        : has("subtle", "light", "gentle", "soft", "clean", "halka", "thoda") ? 0.45 : 0.75;
+
+      const key = has("parth", "football", "soccer", "messi", "ronaldo", "goal", "match", "sports") ? "parth"
+        : has("slayer", "phonk", "funk", "sem deroma", "hardcore") ? "slayer"
+        : has("wizard", "anime", "velocity", "gojo", "sukuna", "flow") ? "wizard"
+        : has("documentary", "vox", "explain", "newspaper", "fact", "kahani") ? "vox"
         : has("cyber", "cyberpunk") ? "cyber"
-        : has("cinematic", "trailer") ? "cine" : null;
+        : has("cinematic", "trailer", "movie", "film") ? "cine" : null;
+
       const tpl = TEMPLATES.find((t) => t.id === key);
       const settings = { ...DEFAULT_SETTINGS, ...(tpl?.settings || {}) };
       const fx = { ...(tpl?.fx || {}) };
       const grade = { ...(tpl?.grade || {}) };
+      const trans = tpl?.trans ? { ...tpl.trans } : null;
+      let splitOnBeats = !!tpl?.splitOnBeats;
       const texts = (tpl?.texts || []).map((t) => ({ ...t }));
       const label = tpl ? [tpl.name] : [];
 
-      if (has("bass", "drop", "beat", "sync", "pump")) {
-        fx.bassZoom = Math.round(85 * k); fx.flash = Math.round(60 * k);
-        settings.zoom = Math.max(settings.zoom, Math.round(35 * k));
-        label.push("bass-sync");
+      if (has("bass", "drop", "beat", "sync", "pump", "dhamaka", "jhanka")) {
+        fx.bassZoom = Math.round(85 * k);
+        fx.flash = Math.round(45 * k);
+        settings.zoom = Math.max(settings.zoom, Math.round(32 * k));
+        label.push("beat-sync");
       }
-      if (has("shake", "jitter", "quake", "rumble")) fx.shake = Math.round(70 * k);
-      if (has("flash", "impact")) fx.flash = Math.round(80 * k);
-      if (has("rgb", "split", "chromatic", "aberration")) { settings.rgb = Math.round(60 * k); fx.rgb = Math.round(50 * k); }
+      if (has("shake", "jitter", "quake", "rumble", "hila", "hilao", "kampan")) {
+        fx.shake = Math.round(80 * k);
+        settings.shake = Math.max(settings.shake, Math.round(70 * k));
+      }
+      if (has("rgb", "split", "chromatic", "aberration", "tear")) {
+        settings.rgb = Math.round(68 * k);
+        fx.rgb = Math.round(68 * k);
+      }
+      if (has("twixtor", "slow", "slowmo", "slow-mo", "dhima", "dheema", "smooth")) {
+        settings.twixtor = true;
+        settings.speed = Math.min(settings.speed, 0.55);
+        settings.ramp = Math.max(settings.ramp, 0.65);
+        label.push("Twixtor");
+      }
+      if (has("reverse", "ulta", "piche se")) {
+        settings.reverse = true;
+        label.push("reverse");
+      }
+      if (has("ping", "ping-pong", "pingpong", "bounce", "snare")) {
+        settings.pingPong = true;
+        splitOnBeats = true;
+        label.push("ping-pong");
+      }
+      if (has("cutout", "subject", "behind", "piche", "peeche", "background remove", "aura", "player")) {
+        settings.cutout = true;
+        settings.aura = Math.max(settings.aura, 55);
+        if (!texts.length) texts.push({ text: "MAIN CHARACTER", preset: "kinetic", layer: "behind", x: 0.5, y: 0.42 });
+        else texts.forEach((tx) => { tx.layer = "behind"; });
+        label.push("AI cutout");
+      }
+      if (has("moody", "dark", "cc", "kaala", "andhera", "crush")) {
+        settings.moodyCC = Math.round(82 * k);
+        settings.crushBlacks = Math.round(45 * k);
+        fx.moodyCC = settings.moodyCC;
+      }
+      if (has("glow", "bloom", "sapphire", "chamak", "chamkeela")) {
+        settings.glow = Math.round(60 * k);
+        fx.glow = settings.glow;
+      }
+      if (has("radial", "blur", "whip", "spin")) {
+        fx.radial = Math.round(70 * k);
+        settings.blur = Math.round(40 * k);
+        settings.tilt3d = Math.max(settings.tilt3d, 55);
+      }
       if (has("glitch")) fx.glitch = Math.round(70 * k);
       if (has("scan", "vhs", "retro")) fx.scan = Math.round(60 * k);
       if (has("grain", "noise", "film")) fx.grain = Math.round(40 * k);
       if (has("vignette")) fx.vignette = Math.round(60 * k);
-      if (has("glow", "bloom", "neon")) settings.glow = Math.round(60 * k);
-      if (has("strobe")) fx.strobe = Math.round(60 * k);
-      if (has("kaleid", "mirror")) fx.kaleido = Math.round(70 * k);
-      if (has("radial", "spin")) fx.radial = Math.round(60 * k);
-      if (has("blur", "motion")) settings.blur = Math.round(30 * k);
-      if (has("ramp", "velocity", "speed")) settings.ramp = +(0.8 * k).toFixed(2);
-      if (has("zoom", "punch")) settings.zoom = Math.round(45 * k);
-      if (has("saturat", "vivid", "colorful")) settings.sat = 150;
-      if (has("contrast", "dark")) settings.contrast = 140;
-      if (has("cinematic", "trailer", "letterbox", "movie")) {
-        grade.letterbox = true; grade.tealOrange = true; grade.kenburns = true;
-        label.push("cinematic");
-      }
-      if (has("documentary", "vox", "paper", "explain")) {
-        grade.paper = true; grade.card = true;
-        texts.push({ text: "THE TRUTH", preset: "highlight" }, { text: "Here is what really happened.", preset: "typewriter" });
-        label.push("documentary");
-      }
-      if (has("hormozi", "caption", "subtitle")) texts.push({ text: "WATCH THIS", preset: "hormozi" });
-      if (has("highlight") && !has("documentary", "vox")) texts.push({ text: "KEY POINT", preset: "highlight" });
-      if (has("title")) texts.push({ text: "TITLE", preset: "neon" });
+      if (has("hormozi", "caption", "subtitle")) texts.push({ text: "WATCH THIS", preset: "hormozi", layer: "front", x: 0.5, y: 0.8 });
+      if (has("scoreboard", "score", "90+")) texts.push({ text: "90+4' · WINNER", preset: "scoreboard", layer: settings.cutout ? "behind" : "front", x: 0.5, y: 0.35 });
+
       const quoted = text.match(/"([^"]+)"/);
       if (quoted) {
         if (texts.length) texts[0].text = quoted[1];
-        else texts.push({ text: quoted[1], preset: "hormozi" });
+        else texts.push({ text: quoted[1], preset: settings.cutout ? "kinetic" : "hormozi", layer: settings.cutout ? "behind" : "front", x: 0.5, y: settings.cutout ? 0.45 : 0.8 });
       }
       if (!label.length) {
-        fx.bassZoom = Math.round(40 * k); settings.contrast = 115;
-        label.push("custom mix");
+        fx.bassZoom = Math.round(50 * k);
+        settings.moodyCC = 40;
+        settings.contrast = 118;
+        label.push("custom GPU mix");
       }
-      return { settings, fx, grade, texts, label: label.join(" · ") };
+      return { settings, fx, grade, trans, splitOnBeats, texts, label: label.join(" · ") };
     }
 
     /* ============================ UI PIECES ============================ */
 
     function Slider({ label, value, min, max, step = 1, onChange, suffix = "" }) {
       return (
-        <label className="block mb-3">
-          <div className="flex justify-between text-[11px] uppercase tracking-wider text-zinc-400">
+        <label className="block mb-2.5">
+          <div className="flex justify-between text-[11px] text-zinc-400">
             <span>{label}</span>
-            <span className="text-cyan-300 font-mono">{Number(value).toFixed(step < 1 ? 2 : 0)}{suffix}</span>
+            <span className="text-cyan-300 font-mono tabular-nums">{Number(value).toFixed(step < 1 ? 2 : 0)}{suffix}</span>
           </div>
           <input type="range" min={min} max={max} step={step} value={value}
-            onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-cyan-400" />
+            onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-cyan-400 h-1.5" />
         </label>
+      );
+    }
+
+    function ToggleRow({ label, hint, checked, onChange, accent = "cyan" }) {
+      const activeBg = accent === "fuchsia" ? "bg-fuchsia-500 text-black" : "bg-cyan-400 text-black";
+      return (
+        <button type="button" onClick={() => onChange(!checked)}
+          className={`w-full flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left transition ${checked ? "border-cyan-500/60 bg-cyan-500/10" : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"}`}>
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-zinc-200 truncate">{label}</div>
+            {hint && <div className="text-[10px] text-zinc-500 truncate">{hint}</div>}
+          </div>
+          <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded ${checked ? activeBg : "bg-zinc-800 text-zinc-400"}`}>
+            {checked ? "ON" : "OFF"}
+          </span>
+        </button>
       );
     }
 
     function MediaCard({ m, icon: Icon, onAdd, addLabel, onRemove }) {
       return (
         <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-2 mb-2">
-          <div className="w-9 h-9 rounded-md bg-gradient-to-br from-zinc-700 to-zinc-900 grid place-items-center shrink-0">
+          <div className="w-9 h-9 rounded-md bg-zinc-800 grid place-items-center shrink-0">
             <Icon size={16} className="text-cyan-300" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-xs truncate">{m.name}</div>
-            <div className="text-[10px] text-zinc-500 font-mono">{m.duration.toFixed(1)}s</div>
+            <div className="text-xs truncate font-medium">{m.name}</div>
+            <div className="text-[10px] text-zinc-500 font-mono tabular-nums">{m.duration.toFixed(1)}s</div>
           </div>
-          <button onClick={onAdd} className="text-[10px] px-2 py-1 rounded bg-cyan-500/90 text-black font-semibold hover:bg-cyan-400">{addLabel}</button>
-          <button onClick={onRemove} className="p-1 rounded hover:bg-red-900/60 text-zinc-500 hover:text-red-300"><Trash2 size={13} /></button>
+          <button onClick={onAdd} className="text-[11px] px-2.5 py-1 rounded bg-cyan-400 text-black font-semibold hover:bg-cyan-300 whitespace-nowrap shrink-0">{addLabel}</button>
+          <button onClick={onRemove} className="p-1.5 rounded hover:bg-red-900/60 text-zinc-500 hover:text-red-300" aria-label="Remove media"><Trash2 size={13} /></button>
         </div>
       );
     }
@@ -1022,18 +2277,18 @@
       const engine = E.current;
 
       const [init] = useState(() => {
-        const beat = makeBeatBuffer(128, 32);
+        const beat = makeBeatBuffer(128, 30);
         return {
           media: [...PROC_DEMOS, {
-            id: "da", name: "128 BPM Kick Loop (demo)", kind: "audio", duration: 32,
+            id: "da", name: "128 BPM Phonk Kick (demo)", kind: "audio", duration: 30,
             buffer: beat.buffer, beats: beat.beats, bpm: 128,
           }],
-          vSegs: [newClip("d1", 0, 12, 0)],
-          aSegs: [{ id: "a0", mediaId: "da", start: 0, dur: 32, off: 0 }],
+          vSegs: [newClip("d0", 0, 12, 0)],
+          aSegs: [{ id: "a0", mediaId: "da", start: 0, dur: 30, off: 0 }],
         };
       });
 
-      const [tab, setTab] = useState("media");
+      const [tab, setTab] = useState("templates");
       const [media, setMedia] = useState(init.media);
       const [vSegs, setVSegs] = useState(init.vSegs);
       const [aSegs, setASegs] = useState(init.aSegs);
@@ -1042,7 +2297,7 @@
       const [aspect, setAspect] = useState("16:9");
       const [draft, setDraft] = useState(true);
       const [pxPerSec, setPxPerSec] = useState(40);
-      const [selection, setSelection] = useState(null);
+      const [selection, setSelection] = useState({ type: "v", id: init.vSegs[0].id });
       const [playing, setPlaying] = useState(false);
       const [uiT, setUiT] = useState(0);
       const [prompt, setPrompt] = useState("");
@@ -1056,6 +2311,8 @@
       const [aiBusy, setAiBusy] = useState(false);
       const [videoMuted, setVideoMuted] = useState(false);
       const [autoRipple, setAutoRipple] = useState(false);
+      const [gpuActive, setGpuActive] = useState(true);
+      const [mpStatus, setMpStatus] = useState("idle");
 
       const canvasRef = useRef(null);
       const waveRef = useRef(null);
@@ -1086,7 +2343,7 @@
       const flash = (msg) => {
         setToast(msg);
         clearTimeout(toastTimer.current);
-        toastTimer.current = setTimeout(() => setToast(""), 3200);
+        toastTimer.current = setTimeout(() => setToast(""), 3500);
       };
 
       const api = {
@@ -1108,6 +2365,23 @@
       };
       engine.api = api;
 
+      useEffect(() => {
+        const cv = canvasRef.current;
+        if (!cv) return;
+        engine.canvas = cv;
+        const glState = initWebGL(cv);
+        if (glState) {
+          engine.glState = glState;
+          engine.useWebGL = true;
+          setGpuActive(true);
+        } else {
+          engine.glState = null;
+          engine.useWebGL = false;
+          setGpuActive(false);
+        }
+        applyDims(engine);
+      }, []);
+
       useEffect(() => { engine.dirty = true; },
         [media, vSegs, aSegs, texts, bpm, aspect, draft]);
 
@@ -1117,6 +2391,16 @@
       }, [videoMuted]);
 
       useEffect(() => { engine.canvas = canvasRef.current; applyDims(engine); }, [aspect, draft]);
+
+      // Auto-load MediaPipe Segmenter when any clip enables AI Cutout
+      useEffect(() => {
+        if (vSegs.some((s) => s.settings.cutout) && MP_STATE.status === "idle") {
+          ensureSegmenter((st) => {
+            setMpStatus(st);
+            if (st === "ready") engine.dirty = true;
+          });
+        }
+      }, [vSegs]);
 
       useEffect(() => {
         let raf = 0;
@@ -1185,7 +2469,9 @@
       };
 
       const addToVideo = (m) => {
-        setVSegs((arr) => [...arr, newClip(m.id, segsEnd(arr), Math.min(m.duration, 600), 0)]);
+        const clip = newClip(m.id, segsEnd(vSegs), Math.min(m.duration, 600), 0);
+        setVSegs((arr) => [...arr, clip]);
+        setSelection({ type: "v", id: clip.id });
         flash(`Added ${m.name} to video track`);
       };
 
@@ -1198,37 +2484,25 @@
       const selClip = selection?.type === "v" ? vSegs.find((s) => s.id === selection.id) || null : null;
       const patchClip = (id, fn) => setVSegs((arr) => arr.map((s) => (s.id === id ? fn(s) : s)));
       const patchSel = (fn) => { if (selClip) patchClip(selClip.id, fn); };
-      const setClipSetting = (k, v) => patchSel((s) => ({ ...s, settings: { ...s.settings, [k]: v } }));
+      const setClipSetting = (k, v) => {
+        if (k === "cutout" && v === true && MP_STATE.status === "idle") {
+          ensureSegmenter(setMpStatus);
+        }
+        patchSel((s) => ({ ...s, settings: { ...s.settings, [k]: v } }));
+      };
       const setClipFx = (k, v) => patchSel((s) => ({ ...s, fx: { ...s.fx, [k]: v } }));
       const setClipGrade = (k, v) => patchSel((s) => ({ ...s, grade: { ...s.grade, [k]: v } }));
 
-      /* Pure: returns a new video track with a look applied to the selected clip (or all clips) */
       const applyLookToSegs = (segs, cfg, sel) => {
         const ids = sel ? [sel.id] : segs.map((s) => s.id);
         return segs.map((s) => (ids.includes(s.id) ? { ...s, ...cloneLook(cfg) } : s));
       };
 
-      const applyTemplate = (t) => {
-        const cfg = cloneLook({ settings: { ...DEFAULT_SETTINGS, ...t.settings }, fx: t.fx || {}, grade: t.grade || {} });
-        if (!vSegs.length) {
-          if (!media.some((x) => x.kind !== "audio")) return flash("Add a clip first");
-          const vm = media.find((x) => x.kind !== "audio");
-          setVSegs([{ ...newClip(vm.id, 0, vm.duration, 0), ...cloneLook(cfg) }]);
-        } else {
-          setVSegs(applyLookToSegs(vSegs, cfg, selClip));
-        }
-        if (t.texts && t.texts.length) {
-          setTexts((ts) => [...ts, ...t.texts.map((tx, i) => mkText(tx.text, tx.preset, 0.5, 0.8 - i * 0.12, duration))]);
-        }
-        flash(`${t.name} → ${selClip ? "selected clip" : "all clips"}`);
-      };
-
-      /* Finds the best drop for the given video length and returns the trimmed audio segment */
       const computeDrop = (videoEnd, audioSegs) => {
         const cur = audioSegs.find((s) => media.some((m) => m.id === s.mediaId && m.buffer));
         const m = cur ? media.find((x) => x.id === cur.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
         if (!m || !m.buffer) return null;
-        const target = videoEnd > 0 ? videoEnd : 30;
+        const target = videoEnd > 0 ? Math.min(30, Math.max(videoEnd, 15)) : 30;
         const W = Math.min(target, m.buffer.duration);
         const best = findBestDrop(m.buffer, W);
         const seg = {
@@ -1239,17 +2513,74 @@
         return { seg, m, best };
       };
 
+      const applyTemplate = (t) => {
+        const cfg = cloneLook({
+          settings: { ...DEFAULT_SETTINGS, ...t.settings },
+          fx: t.fx || {},
+          grade: t.grade || {},
+          trans: t.trans || null,
+        });
+
+        let nextV;
+        if (!vSegs.length) {
+          const vm = media.find((x) => x.kind !== "audio");
+          if (!vm) return flash("Add a clip first");
+          nextV = [{ ...newClip(vm.id, 0, vm.duration, 0), ...cloneLook(cfg) }];
+        } else {
+          nextV = applyLookToSegs(vSegs, cfg, selClip);
+        }
+
+        if (t.splitOnBeats) {
+          const beatsTL = beatsTimeline(aSegs, media);
+          nextV = splitOnBeats(nextV, beatsTL, 2, !!t.settings.pingPong);
+          // Re-apply transition on beat cuts
+          if (t.trans) {
+            nextV = nextV.map((s, idx) => (idx === 0 ? s : { ...s, trans: { ...t.trans } }));
+          }
+        }
+
+        setVSegs(nextV);
+        if (nextV.length) setSelection({ type: "v", id: nextV[0].id });
+
+        if (t.texts && t.texts.length) {
+          setTexts((ts) => [
+            ...ts,
+            ...t.texts.map((tx, i) =>
+              mkText(tx.text, tx.preset, tx.x ?? 0.5, tx.y ?? (0.78 - i * 0.14), duration, tx.layer || "front", tx.size)
+            ),
+          ]);
+        }
+        if (t.settings.cutout) ensureSegmenter(setMpStatus);
+        flash(`${t.name} applied`);
+      };
+
       const autoFindDrop = () => {
-        const vEnd = segsEnd(vSegs);
-        const r = computeDrop(vEnd, aSegs);
-        if (!r) return flash("Add an audio track first");
-        setASegs([r.seg]);
-        if (r.m.bpm) setBpm(r.m.bpm);
-        flash(`Best drop at ${fmtTC(r.best.start)} · ${r.best.count} beats in window`);
+        const cur = aSegs.find((s) => media.some((m) => m.id === s.mediaId && m.buffer));
+        const m = cur ? media.find((x) => x.id === cur.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
+        if (!m || !m.buffer) return flash("Add an audio track first");
+        // Scan entire song for the hardest 30-second drop (or full track if shorter)
+        const W = Math.min(30, m.buffer.duration);
+        const best = findBestDrop(m.buffer, W);
+        const seg = {
+          id: uid(), mediaId: m.id, start: 0,
+          dur: Math.min(W, m.buffer.duration - best.start),
+          off: best.start,
+        };
+        setASegs([seg]);
+        if (m.bpm) setBpm(m.bpm);
+        flash(`Hardest 30s drop locked @ ${fmtTC(best.start)} · ${best.count} beats`);
+      };
+
+      const togglePingPongAll = () => {
+        const beatsTL = beatsTimeline(aSegs, media);
+        let nextV = splitOnBeats(vSegs, beatsTL, 2, true);
+        nextV = nextV.map((s) => ({ ...s, settings: { ...s.settings, pingPong: true } }));
+        setVSegs(nextV);
+        flash(`Ping-Pong Beat Bounce enabled across ${nextV.length} cuts`);
       };
 
       const runDirector = async () => {
-        if (!prompt.trim()) return flash("Type a prompt first");
+        if (!prompt.trim()) return flash("Type an English or Hinglish prompt first");
         setAiBusy(true);
         try {
           const intense = INTENSE_RE.test(prompt);
@@ -1257,12 +2588,17 @@
           let r = null;
           if (useGemini && geminiKey.trim()) {
             try { r = sanitizeAI(await askGemini(geminiKey.trim(), prompt)); }
-            catch (_) { flash("Gemini unavailable — using offline engine"); }
+            catch (_) { flash("Gemini 2.5 Flash unavailable — using offline Hinglish/English engine"); }
           }
           if (!r) r = parsePrompt(prompt);
           if (intense) r = boostIntensity(r);
 
-          const cfg = cloneLook({ settings: { ...DEFAULT_SETTINGS, ...r.settings }, fx: r.fx || {}, grade: r.grade || {} });
+          const cfg = cloneLook({
+            settings: { ...DEFAULT_SETTINGS, ...r.settings },
+            fx: r.fx || {},
+            grade: r.grade || {},
+            trans: r.trans || null,
+          });
 
           let nextV;
           if (!vSegs.length) {
@@ -1284,15 +2620,18 @@
           }
 
           let splitMsg = "";
-          if (intense) {
+          if (intense || r.splitOnBeats) {
             const before = nextV.length;
-            nextV = splitOnBeats(nextV, beatsTimeline(nextA, media));
-            splitMsg = ` · ${nextV.length - before} beat cuts`;
+            nextV = splitOnBeats(nextV, beatsTimeline(nextA, media), 2, !!r.settings.pingPong);
+            if (r.trans) nextV = nextV.map((s, idx) => (idx === 0 ? s : { ...s, trans: { ...r.trans } }));
+            splitMsg = ` · ${Math.max(0, nextV.length - before)} beat cuts`;
           }
 
           const newTexts = (r.texts || []).map((tx, i) =>
-            mkText(tx.text, tx.preset, 0.5, 0.8 - i * 0.12, duration));
+            mkText(tx.text, tx.preset, tx.x ?? 0.5, tx.y ?? (tx.layer === "behind" ? 0.42 : 0.8 - i * 0.12), duration, tx.layer || "front")
+          );
 
+          if (r.settings.cutout) ensureSegmenter(setMpStatus);
           setVSegs(nextV);
           setASegs(nextA);
           if (newTexts.length) setTexts((ts) => [...ts, ...newTexts]);
@@ -1331,7 +2670,7 @@
             const cut = target.start + target.dur - 1e-4;
             return rest.map((s) => (s.start >= cut ? { ...s, start: Math.max(0, s.start - target.dur) } : s));
           });
-          flash(autoRipple ? "Clip deleted · following clips rippled" : "Clip deleted · gap left");
+          flash(autoRipple ? "Clip deleted · rippled" : "Clip deleted");
         }
         if (selection.type === "a") setASegs((a) => a.filter((s) => s.id !== selection.id));
         if (selection.type === "t") setTexts((a) => a.filter((s) => s.id !== selection.id));
@@ -1340,8 +2679,8 @@
 
       const applyTransition = (tr) => {
         if (!selClip) return flash("Select a video clip first");
-        patchSel((s) => ({ ...s, trans: { id: tr.id, dur: 0.6 } }));
-        flash(`${tr.name} applied to clip`);
+        patchSel((s) => ({ ...s, trans: { id: tr.id, dur: 0.55 } }));
+        flash(`${tr.name} applied`);
       };
 
       const addKeyframe = () => {
@@ -1381,7 +2720,12 @@
       };
 
       const addText = (preset) => {
-        const tx = mkText(preset === "hormozi" ? "BIG POP" : "Your text", preset, 0.5, 0.78, 4);
+        const defaultTxt = preset === "scoreboard" ? "90+4' · CLUTCH"
+          : preset === "kinetic" ? "GOATED"
+          : preset === "hormozi" ? "BIG POP"
+          : "Your text";
+        const layer = (preset === "scoreboard" || preset === "kinetic") && selClip?.settings?.cutout ? "behind" : "front";
+        const tx = mkText(defaultTxt, preset, 0.5, layer === "behind" ? 0.42 : 0.78, 4, layer);
         tx.start = engine.tl;
         setTexts((ts) => [...ts, tx]);
         setSelection({ type: "t", id: tx.id });
@@ -1399,7 +2743,7 @@
         setExportPct(0);
 
         engine.dest = c.createMediaStreamDestination();
-        engine.vAudio.forEach(({ gain }) => { try { gain.connect(engine.dest); } catch (_) { /* noop */ } });
+        engine.vAudio.forEach(({ gain }) => { try { gain.connect(engine.dest); } catch (_) {} });
         engine.savedDraft = engine.draft;
         engine.draft = false;
         applyDims(engine);
@@ -1410,27 +2754,32 @@
         const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
           .find((m) => MediaRecorder.isTypeSupported(m)) || "";
         const chunks = [];
-        const rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 12000000 });
+        const rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 14000000 });
         rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
         rec.onstop = () => {
           const blob = new Blob(chunks, { type: "video/webm" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
-          a.href = url; a.download = `ai-edit-1080p-${Date.now()}.webm`;
-          document.body.appendChild(a); a.click(); a.remove();
+          a.href = url;
+          a.download = `neoncut-gpu-1080p-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 5000);
           stream.getTracks().forEach((t) => t.stop());
           const d = engine.dest;
           if (d) {
-            engine.vAudio.forEach(({ gain }) => { try { gain.disconnect(d); } catch (_) { /* noop */ } });
-            try { d.disconnect(); } catch (_) { /* noop */ }
+            engine.vAudio.forEach(({ gain }) => { try { gain.disconnect(d); } catch (_) {} });
+            try { d.disconnect(); } catch (_) {}
           }
-          engine.dest = null; engine.rec = null;
+          engine.dest = null;
+          engine.rec = null;
           engine.exporting = false;
           engine.draft = engine.savedDraft;
           applyDims(engine);
-          setExporting(false); setExportPct(100);
-          flash("Export complete — download started");
+          setExporting(false);
+          setExportPct(100);
+          flash("1080p 60fps WebGL export complete");
         };
         engine.rec = rec;
 
@@ -1467,8 +2816,6 @@
           setSelection({ type: "t", id: hit.id });
           dragTextRef.current = hit.id;
           e.currentTarget.setPointerCapture(e.pointerId);
-        } else {
-          setSelection(null);
         }
       };
       const onCanvasMove = (e) => {
@@ -1494,11 +2841,11 @@
                 onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                 onDragLeave={() => setDragging(false)}
                 onDrop={(e) => { e.preventDefault(); setDragging(false); [...e.dataTransfer.files].forEach(ingestFile); }}
-                className={`rounded-xl border-2 border-dashed p-5 text-center transition ${dragging ? "border-cyan-400 bg-cyan-400/10" : "border-zinc-700 bg-zinc-900/50"}`}
+                className={`rounded-xl border border-dashed p-5 text-center transition ${dragging ? "border-cyan-400 bg-cyan-400/10" : "border-zinc-700 bg-zinc-900/50"}`}
               >
                 <Upload className="mx-auto mb-2 text-cyan-300" size={22} />
-                <p className="text-sm text-zinc-300">Drop MP4 / WebM / MP3 / WAV here</p>
-                <label className="inline-block mt-3 px-3 py-1.5 rounded-lg bg-cyan-500 text-black text-xs font-semibold cursor-pointer hover:bg-cyan-400">
+                <p className="text-xs text-zinc-300 font-medium">Drop MP4 / WebM / MP3 / WAV here</p>
+                <label className="inline-block mt-3 px-3 py-1.5 rounded-lg bg-cyan-400 text-black text-xs font-semibold cursor-pointer hover:bg-cyan-300">
                   Choose files
                   <input type="file" multiple accept="video/*,audio/*,.mp4,.webm,.mov,.mp3,.wav,.ogg,.m4a" hidden
                     onChange={(e) => { [...e.target.files].forEach(ingestFile); e.target.value = ""; }} />
@@ -1507,14 +2854,14 @@
               </div>
 
               <div>
-                <h4 className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Video & demo clips</h4>
+                <h4 className="text-[11px] font-medium text-zinc-500 mb-2">Video & demo clips</h4>
                 {videoMedia.map((m) => (
                   <MediaCard key={m.id} m={m} icon={m.kind === "proc" ? Monitor : Video}
                     onAdd={() => addToVideo(m)} addLabel="+ Video" onRemove={() => removeMedia(m)} />
                 ))}
               </div>
               <div>
-                <h4 className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Audio</h4>
+                <h4 className="text-[11px] font-medium text-zinc-500 mb-2">Audio</h4>
                 {audioMedia.map((m) => (
                   <MediaCard key={m.id} m={m} icon={Music}
                     onAdd={() => addToAudio(m)} addLabel="+ Audio" onRemove={() => removeMedia(m)} />
@@ -1529,18 +2876,18 @@
           return (
             <div className="space-y-3">
               <p className="text-xs text-zinc-400">
-                Applies to {selClip ? "the selected clip" : "every video clip"}. Select a clip on the timeline to target just one.
+                One-click GPU presets targeting {selClip ? "selected clip" : "all timeline clips"}.
               </p>
               {TEMPLATES.map((t) => (
                 <div key={t.id} className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/60">
-                  <div className={`h-20 bg-gradient-to-br ${t.color} relative`}>
-                    <span className="absolute top-2 left-2 text-[10px] font-bold bg-black/50 px-2 py-0.5 rounded-full">{t.badge}</span>
+                  <div className={`h-16 bg-gradient-to-br ${t.color} px-3 flex items-end pb-2`}>
+                    <span className="text-[11px] font-semibold text-white/90">{t.badge}</span>
                   </div>
                   <div className="p-3">
-                    <div className="font-semibold text-sm">{t.name}</div>
-                    <p className="text-xs text-zinc-400 mt-1">{t.desc}</p>
+                    <div className="font-semibold text-sm text-zinc-100">{t.name}</div>
+                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{t.desc}</p>
                     <button onClick={() => applyTemplate(t)}
-                      className="mt-2 w-full text-xs py-1.5 rounded-lg bg-cyan-500/90 hover:bg-cyan-400 text-black font-semibold">
+                      className="mt-2.5 w-full text-xs py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black font-semibold transition whitespace-nowrap">
                       Apply template
                     </button>
                   </div>
@@ -1552,35 +2899,35 @@
 
         if (tab === "effects") {
           if (!selClip) {
-            return <p className="text-xs text-zinc-500">Select a video clip on the timeline to attach effects to it.</p>;
+            return <p className="text-xs text-zinc-500">Select a video clip on the timeline to attach GPU shaders.</p>;
           }
           return (
             <div className="space-y-2">
-              <p className="text-[11px] text-cyan-300 mb-1">Attached to selected clip</p>
+              <p className="text-[11px] text-cyan-300 mb-1">Active clip shaders</p>
               {EFFECTS.map((e) => {
                 const v = selClip.fx[e.id] || 0;
                 const on = v > 0;
                 return (
                   <div key={e.id} className={`rounded-lg border p-2.5 ${on ? "border-cyan-500/60 bg-cyan-500/5" : "border-zinc-800 bg-zinc-900/50"}`}>
                     <button className="w-full text-left" onClick={() => setClipFx(e.id, on ? 0 : 60)}>
-                      <div className="text-sm font-medium flex justify-between">
+                      <div className="text-xs font-medium flex justify-between items-center">
                         <span>{e.name}</span>
-                        <span className={`text-[10px] px-1.5 rounded ${on ? "bg-cyan-400 text-black" : "bg-zinc-800 text-zinc-400"}`}>{on ? "ON" : "OFF"}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${on ? "bg-cyan-400 text-black" : "bg-zinc-800 text-zinc-400"}`}>{on ? "ON" : "OFF"}</span>
                       </div>
-                      <div className="text-[11px] text-zinc-500">{e.hint}</div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">{e.hint}</div>
                     </button>
                     {on && (
-                      <input type="range" min={0} max={100} value={v} className="w-full accent-cyan-400 mt-2"
+                      <input type="range" min={0} max={100} value={v} className="w-full accent-cyan-400 mt-2 h-1.5"
                         onChange={(ev) => setClipFx(e.id, Number(ev.target.value))} />
                     )}
                   </div>
                 );
               })}
-              <div className="pt-2">
-                <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Clip grade</div>
+              <div className="pt-2 border-t border-zinc-800">
+                <div className="text-[11px] font-medium text-zinc-400 mb-2">Documentary & Cinema Grade</div>
                 {GRADES.map((g) => (
-                  <label key={g.id} className="flex items-center gap-2 text-xs py-1">
-                    <input type="checkbox" checked={!!selClip.grade[g.id]} onChange={(e) => setClipGrade(g.id, e.target.checked)} />
+                  <label key={g.id} className="flex items-center gap-2 text-xs py-1 cursor-pointer">
+                    <input type="checkbox" checked={!!selClip.grade[g.id]} onChange={(e) => setClipGrade(g.id, e.target.checked)} className="accent-cyan-400" />
                     {g.name}
                   </label>
                 ))}
@@ -1593,18 +2940,18 @@
           return (
             <div className="space-y-2">
               <p className="text-xs text-zinc-400">
-                {selClip ? "Pick a transition to apply at this clip's start." : "Select a video clip on the timeline first."}
+                {selClip ? "Pick a GPU transition for this clip's entry." : "Select a video clip on the timeline first."}
               </p>
               {TRANSITIONS.map((tr) => (
                 <button key={tr.id} onClick={() => applyTransition(tr)} disabled={!selClip}
-                  className="w-full flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2.5 text-sm hover:border-cyan-500/50 disabled:opacity-40">
+                  className="w-full flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2.5 text-xs font-medium hover:border-cyan-500/50 disabled:opacity-40">
                   <span>{tr.name}</span>
                   <Plus size={14} className="text-cyan-300" />
                 </button>
               ))}
               {selClip?.trans && (
                 <button onClick={() => patchSel((s) => ({ ...s, trans: null }))}
-                  className="w-full text-xs py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">Remove transition from clip</button>
+                  className="w-full text-xs py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700">Remove transition</button>
               )}
             </div>
           );
@@ -1615,62 +2962,81 @@
             <div className="grid grid-cols-2 gap-2">
               {PRESETS.map((p) => (
                 <button key={p.id} onClick={() => addText(p.id)}
-                  className="text-left text-xs rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 hover:border-fuchsia-500/60">
-                  <Type size={14} className="text-fuchsia-300 mb-1" />
-                  {p.name}
+                  className="text-left text-xs rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5 hover:border-cyan-400/60">
+                  <Type size={14} className="text-cyan-300 mb-1" />
+                  <div className="leading-tight font-medium">{p.name}</div>
                 </button>
               ))}
             </div>
             {selText ? (
               <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 space-y-3">
-                <div className="text-[11px] uppercase tracking-wider text-zinc-400">Edit text</div>
+                <div className="text-xs font-semibold text-zinc-300">Edit Text Layer</div>
                 <input value={selText.text} onChange={(e) => updateText(selText.id, { text: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-sm outline-none focus:border-cyan-500" />
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-cyan-400" />
                 <select value={selText.preset} onChange={(e) => updateText(selText.id, { preset: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-sm">
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs">
                   {PRESETS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                <div className="flex gap-1.5 p-1 rounded-lg bg-zinc-950 border border-zinc-800">
+                  <button type="button" onClick={() => updateText(selText.id, { layer: "behind" })}
+                    className={`flex-1 py-1 text-[11px] rounded font-medium flex items-center justify-center gap-1 ${selText.layer === "behind" ? "bg-cyan-400 text-black font-semibold" : "text-zinc-400 hover:text-white"}`}>
+                    <Layers size={12} /> Behind Subject
+                  </button>
+                  <button type="button" onClick={() => updateText(selText.id, { layer: "front" })}
+                    className={`flex-1 py-1 text-[11px] rounded font-medium ${selText.layer !== "behind" ? "bg-cyan-400 text-black font-semibold" : "text-zinc-400 hover:text-white"}`}>
+                    In Front
+                  </button>
+                </div>
                 <Slider label="Font size" value={selText.size} min={24} max={200} onChange={(v) => updateText(selText.id, { size: v })} />
                 <div className="grid grid-cols-2 gap-2">
                   <Slider label="Start (s)" value={selText.start} min={0} max={duration} step={0.1} onChange={(v) => updateText(selText.id, { start: v })} />
                   <Slider label="Length (s)" value={selText.dur} min={0.5} max={duration} step={0.1} onChange={(v) => updateText(selText.id, { dur: v })} />
                 </div>
-                <p className="text-[11px] text-zinc-500">Drag the text on the preview to position it.</p>
+                <p className="text-[11px] text-zinc-500">Enable AI Cutout on the clip for Behind Subject depth occlusion.</p>
               </div>
             ) : (
-              <p className="text-xs text-zinc-500">Add a preset, then click any text on the preview to edit or drag it.</p>
+              <p className="text-xs text-zinc-500">Add a preset, then click any text on the preview to edit, layer, or drag it.</p>
             )}
           </div>
         );
       };
 
       return (
-        <div className="h-screen w-screen flex flex-col bg-[#0a0a0e] text-zinc-200 overflow-hidden select-none">
-          <header className="h-12 shrink-0 flex items-center gap-3 px-3 border-b border-zinc-800 bg-zinc-950">
-            <div className="flex items-center gap-2 font-bold tracking-tight">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-fuchsia-600 grid place-items-center">
+        <div className="h-screen w-screen flex flex-col bg-[#09090d] text-zinc-200 overflow-hidden select-none">
+          {/* Clean 3-Zone Top Header */}
+          <header className="h-12 shrink-0 flex items-center justify-between gap-8 px-4 border-b border-zinc-800 bg-zinc-950">
+            <div className="flex items-center gap-2 font-bold tracking-tight text-sm whitespace-nowrap shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-cyan-400 grid place-items-center">
                 <Wand2 size={15} className="text-black" />
               </div>
-              Neon<span className="text-cyan-400">Cut</span>
+              <span>Neon<span className="text-cyan-400">Cut</span></span>
             </div>
-            <div className="ml-4 flex bg-zinc-900 rounded-lg p-0.5">
-              {Object.keys(ASPECTS).map((a) => (
-                <button key={a} onClick={() => setAspect(a)}
-                  className={`px-2.5 py-1 text-xs rounded-md ${aspect === a ? "bg-cyan-500 text-black font-semibold" : "text-zinc-400 hover:text-white"}`}>{a}</button>
-              ))}
+
+            <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
+              <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800">
+                {Object.keys(ASPECTS).map((a) => (
+                  <button key={a} onClick={() => setAspect(a)}
+                    className={`px-2.5 py-1 text-xs rounded-md transition whitespace-nowrap shrink-0 ${aspect === a ? "bg-cyan-400 text-black font-semibold" : "text-zinc-400 hover:text-white"}`}>{a}</button>
+                ))}
+              </div>
+              <button onClick={() => setDraft((d) => !d)}
+                className="px-3 py-1 text-xs rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white whitespace-nowrap shrink-0">
+                {draft ? "Preview 540p" : "Preview 1080p"}
+              </button>
+              <span className="text-xs text-zinc-400 font-mono flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <Cpu size={13} className={gpuActive ? "text-cyan-400" : "text-amber-400"} />
+                {gpuActive ? "WebGL GPU" : "2D Fallback"}
+              </span>
             </div>
-            <button onClick={() => setDraft((d) => !d)}
-              className="px-2.5 py-1 text-xs rounded-md bg-zinc-900 text-zinc-300 hover:text-white">
-              {draft ? "Preview 540p" : "Preview 1080p"}
-            </button>
-            <div className="ml-auto flex items-center gap-3">
+
+            <div className="flex items-center gap-3 shrink-0">
               {exporting && (
-                <div className="w-48 h-2 bg-zinc-800 rounded overflow-hidden">
-                  <div className="h-2 bg-gradient-to-r from-cyan-400 to-fuchsia-500 transition-all" style={{ width: `${exportPct}%` }} />
+                <div className="w-36 h-2 bg-zinc-800 rounded overflow-hidden">
+                  <div className="h-2 bg-cyan-400 transition-all" style={{ width: `${exportPct}%` }} />
                 </div>
               )}
               <button onClick={startExport} disabled={exporting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-black text-xs font-bold disabled:opacity-60">
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black text-xs font-bold disabled:opacity-60 whitespace-nowrap shrink-0">
                 <Download size={14} />
                 {exporting ? `Exporting ${exportPct}%` : "Export 1080p"}
               </button>
@@ -1684,15 +3050,16 @@
                 const active = tab === t.id;
                 return (
                   <button key={t.id} onClick={() => setTab(t.id)}
-                    className={`w-14 py-2 rounded-lg flex flex-col items-center gap-1 text-[10px] ${active ? "bg-cyan-500/15 text-cyan-300" : "text-zinc-500 hover:text-zinc-200"}`}>
-                    <Icon size={18} />
-                    {t.label}
+                    className={`w-14 py-2 rounded-lg flex flex-col items-center gap-1 text-[10px] transition ${active ? "bg-cyan-400/15 text-cyan-300" : "text-zinc-500 hover:text-zinc-200"}`}>
+                    <Icon size={17} />
+                    <span>{t.label}</span>
                   </button>
                 );
               })}
             </nav>
-            <aside className="w-72 shrink-0 bg-zinc-950/80 border-r border-zinc-800 overflow-y-auto p-3">
-              <h3 className="text-sm font-semibold mb-3 capitalize">{TABS.find((t) => t.id === tab)?.label}</h3>
+
+            <aside className="w-76 shrink-0 bg-zinc-950/80 border-r border-zinc-800 overflow-y-auto p-3.5" style={{ width: "18.5rem" }}>
+              <h3 className="text-sm font-semibold mb-3">{TABS.find((t) => t.id === tab)?.label}</h3>
               {renderPanel()}
             </aside>
 
@@ -1706,143 +3073,181 @@
                   <canvas ref={canvasRef}
                     className="w-full h-full bg-black cursor-default"
                     onPointerDown={onCanvasDown} onPointerMove={onCanvasMove} onPointerUp={onCanvasUp} />
-                  <div className="absolute top-2 right-2 font-mono text-[11px] bg-black/60 px-2 py-0.5 rounded text-cyan-300">
+                  <div className="absolute top-2 right-2 font-mono tabular-nums text-[11px] bg-black/70 px-2 py-0.5 rounded text-cyan-300">
                     {fmtTC(uiT)}
                   </div>
                 </div>
               </div>
 
               <div className="shrink-0 px-4 pb-2">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => api.seek(0)} className="p-2 rounded-lg hover:bg-zinc-800"><SkipBack size={16} /></button>
-                  <button onClick={() => api.step(-1)} className="p-2 rounded-lg hover:bg-zinc-800 text-xs font-mono">−1f</button>
+                <div className="flex items-center gap-2.5">
+                  <button onClick={() => api.seek(0)} className="p-2 rounded-lg hover:bg-zinc-800" aria-label="Skip to start"><SkipBack size={16} /></button>
+                  <button onClick={() => api.step(-1)} className="px-2 py-1.5 rounded-lg hover:bg-zinc-800 text-xs font-mono">−1f</button>
                   <button onClick={api.toggle}
-                    className="w-10 h-10 rounded-full bg-cyan-500 text-black grid place-items-center hover:bg-cyan-400">
+                    className="w-10 h-10 rounded-full bg-cyan-400 text-black grid place-items-center hover:bg-cyan-300" aria-label={playing ? "Pause" : "Play"}>
                     {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
                   </button>
-                  <button onClick={() => api.step(1)} className="p-2 rounded-lg hover:bg-zinc-800 text-xs font-mono">+1f</button>
-                  <button onClick={() => api.seek(duration)} className="p-2 rounded-lg hover:bg-zinc-800"><SkipForward size={16} /></button>
+                  <button onClick={() => api.step(1)} className="px-2 py-1.5 rounded-lg hover:bg-zinc-800 text-xs font-mono">+1f</button>
+                  <button onClick={() => api.seek(duration)} className="p-2 rounded-lg hover:bg-zinc-800" aria-label="Skip to end"><SkipForward size={16} /></button>
                   <input type="range" min={0} max={duration} step={1 / 30} value={uiT}
                     onChange={(e) => { api.pause(); api.seek(Number(e.target.value)); }}
                     className="flex-1 accent-cyan-400" />
-                  <span className="font-mono text-xs text-cyan-300 w-36 text-right">{fmtTC(uiT)} / {fmtTC(duration)}</span>
+                  <span className="font-mono tabular-nums text-xs text-cyan-300 w-40 text-right">{fmtTC(uiT)} / {fmtTC(duration)}</span>
                 </div>
-                <canvas ref={waveRef} width={800} height={56} className="w-full h-12 mt-2 rounded bg-zinc-900/60" />
+                <canvas ref={waveRef} width={800} height={48} className="w-full h-10 mt-1.5 rounded bg-zinc-900/60" />
               </div>
             </main>
 
-            <aside className="w-72 shrink-0 bg-zinc-950/80 border-l border-zinc-800 overflow-y-auto p-3">
-              <div className="rounded-xl border border-fuchsia-500/30 bg-gradient-to-b from-fuchsia-500/10 to-transparent p-3 mb-4">
+            <aside className="shrink-0 bg-zinc-950/80 border-l border-zinc-800 overflow-y-auto p-3.5" style={{ width: "19.5rem" }}>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 mb-4">
                 <div className="flex items-center gap-2 text-sm font-semibold mb-2">
-                  <Sparkles size={15} className="text-fuchsia-300" /> AI Magic Director
+                  <Sparkles size={15} className="text-cyan-300" /> AI Magic Director
                 </div>
                 <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
-                  placeholder='e.g. "Intense phonk edit, heavy shakes on bass drops"'
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs outline-none focus:border-fuchsia-500 resize-none" />
-                <p className="text-[10px] text-zinc-500 mt-1">
-                  "intense", "hardcore", "phonk", "funk" or "sem deroma" doubles shake, zoom, flash and RGB and auto-cuts on every 2nd beat.
+                  placeholder='Try: "Parth style football slow-mo, player ke piche text, dark moody CC" or "Slayer hardcore phonk"'
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-cyan-400 resize-none" />
+                <p className="text-[11px] text-zinc-500 mt-1.5 leading-snug">
+                  Supports English &amp; Hinglish prompts. Auto-locks onto the hardest 30s beat drop and splits intense cuts on beats.
                 </p>
                 <button onClick={runDirector} disabled={aiBusy}
-                  className="mt-2 w-full py-1.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60">
+                  className="mt-2.5 w-full py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60">
                   {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />} Generate magic edit
                 </button>
-                <label className="mt-2 flex items-center gap-2 text-[11px] text-zinc-400">
-                  <input type="checkbox" checked={useGemini} onChange={(e) => setUseGemini(e.target.checked)} /> Use Gemini (optional)
+                <label className="mt-2.5 flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                  <input type="checkbox" checked={useGemini} onChange={(e) => setUseGemini(e.target.checked)} className="accent-cyan-400" />
+                  <span>Use Gemini 2.5 Flash API key</span>
                 </label>
                 {useGemini && (
                   <div className="mt-2 flex items-center gap-1.5">
-                    <Key size={12} className="text-zinc-500" />
+                    <Key size={12} className="text-zinc-500 shrink-0" />
                     <input type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)}
-                      placeholder="Gemini API key"
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-xs outline-none" />
+                      placeholder="Paste free Gemini API key"
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1 text-xs outline-none focus:border-cyan-400" />
                   </div>
                 )}
               </div>
 
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold">Live Inspector</h4>
+                <h4 className="text-sm font-semibold flex items-center gap-1.5"><Sliders size={14} className="text-cyan-300" /> Live GPU Inspector</h4>
                 {selClip && (
                   <button onClick={() => patchSel((s) => ({ ...s, settings: { ...DEFAULT_SETTINGS }, fx: {}, grade: {}, kfs: [] }))}
-                    className="text-[11px] text-zinc-400 hover:text-white">Reset clip</button>
+                    className="text-xs text-zinc-400 hover:text-white">Reset clip</button>
                 )}
               </div>
 
               {!selClip ? (
-                <p className="text-xs text-zinc-500">Select a video clip on the timeline to edit its effects, speed and keyframes.</p>
+                <p className="text-xs text-zinc-500">Select a video clip on the timeline to adjust shaders, Twixtor, Reverse, and AI Cutout.</p>
               ) : (
-                <>
-                  <p className="text-[11px] text-cyan-300 mb-3">Editing clip · {vSegs.findIndex((s) => s.id === selClip.id) + 1}</p>
-                  <Slider label="Zoom (base)" value={selClip.settings.zoom} min={0} max={100} onChange={(v) => setClipSetting("zoom", v)} />
-                  <Slider label="Shake" value={selClip.settings.shake} min={0} max={100} onChange={(v) => setClipSetting("shake", v)} />
-                  <Slider label="Motion Blur" value={selClip.settings.blur} min={0} max={100} onChange={(v) => setClipSetting("blur", v)} />
-                  <Slider label="Glow" value={selClip.settings.glow} min={0} max={100} onChange={(v) => setClipSetting("glow", v)} />
-                  <Slider label="RGB Split" value={selClip.settings.rgb} min={0} max={100} onChange={(v) => setClipSetting("rgb", v)} />
-                  <Slider label="Contrast" value={selClip.settings.contrast} min={50} max={200} suffix="%" onChange={(v) => setClipSetting("contrast", v)} />
-                  <Slider label="Saturation" value={selClip.settings.sat} min={0} max={200} suffix="%" onChange={(v) => setClipSetting("sat", v)} />
-                  <Slider label="Playback Speed" value={selClip.settings.speed} min={0.25} max={2} step={0.05} suffix="×" onChange={(v) => setClipSetting("speed", v)} />
-                  <Slider label="Speed Ramp (velocity)" value={selClip.settings.ramp} min={0} max={1} step={0.01} onChange={(v) => setClipSetting("ramp", v)} />
+                <div className="space-y-3">
+                  <p className="text-xs text-cyan-300">Editing clip {vSegs.findIndex((s) => s.id === selClip.id) + 1}</p>
 
-                  <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
+                  {/* Twixtor, Reverse & Ping-Pong Controls */}
+                  <div className="space-y-1.5 pt-1">
+                    <ToggleRow label="Twixtor Optical Blend" hint="Smooth frame interpolation below 1.0×"
+                      checked={!!selClip.settings.twixtor} onChange={(v) => setClipSetting("twixtor", v)} />
+                    <ToggleRow label="Reverse Playback" hint="Play clip backwards smoothly"
+                      checked={!!selClip.settings.reverse} onChange={(v) => setClipSetting("reverse", v)} />
+                    <ToggleRow label="Ping-Pong Beat Bounce" hint="Reverse alternate cuts on snare hits"
+                      checked={!!selClip.settings.pingPong} onChange={(v) => setClipSetting("pingPong", v)} />
+                    <ToggleRow label={mpStatus === "loading" ? "AI Cutout (Loading Model…)" : "AI Cutout (MediaPipe)"}
+                      hint="Isolate subject for text-behind & neon aura"
+                      checked={!!selClip.settings.cutout} onChange={(v) => setClipSetting("cutout", v)} />
+                  </div>
+
+                  {selClip.settings.cutout && (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-2.5 space-y-2">
+                      <Slider label="Neon Aura Outline" value={selClip.settings.aura ?? 45} min={0} max={100} onChange={(v) => setClipSetting("aura", v)} />
+                      <label className="flex items-center justify-between text-xs text-zinc-400">
+                        <span>Aura Color</span>
+                        <input type="color" value={selClip.settings.auraColor || "#22d3ee"}
+                          onChange={(e) => setClipSetting("auraColor", e.target.value)}
+                          className="w-8 h-5 bg-transparent border-0 cursor-pointer" />
+                      </label>
+                    </div>
+                  )}
+
+                  <div className="pt-1 border-t border-zinc-800">
+                    <Slider label="Playback Speed" value={selClip.settings.speed} min={0.25} max={2} step={0.05} suffix="×" onChange={(v) => setClipSetting("speed", v)} />
+                    <Slider label="Cubic Speed Ramp" value={selClip.settings.ramp} min={0} max={1} step={0.01} onChange={(v) => setClipSetting("ramp", v)} />
+                    <Slider label="Zoom (base)" value={selClip.settings.zoom} min={0} max={100} onChange={(v) => setClipSetting("zoom", v)} />
+                    <Slider label="3D Camera Tilt" value={selClip.settings.tilt3d || 0} min={0} max={100} onChange={(v) => setClipSetting("tilt3d", v)} />
+                    <Slider label="Motion-Tile Shake" value={selClip.settings.shake} min={0} max={100} onChange={(v) => setClipSetting("shake", v)} />
+                    <Slider label="Directional Motion Blur" value={selClip.settings.blur} min={0} max={100} onChange={(v) => setClipSetting("blur", v)} />
+                    <Slider label="RGB Chromatic Tear" value={selClip.settings.rgb} min={0} max={100} onChange={(v) => setClipSetting("rgb", v)} />
+                    <Slider label="Sapphire HDR Glow" value={selClip.settings.glow} min={0} max={100} onChange={(v) => setClipSetting("glow", v)} />
+                    <Slider label="HDR Glow Threshold" value={selClip.settings.glowThreshold ?? 0.62} min={0.3} max={0.92} step={0.02} onChange={(v) => setClipSetting("glowThreshold", v)} />
+                    <Slider label="Dark Moody CC" value={selClip.settings.moodyCC || 0} min={0} max={100} onChange={(v) => setClipSetting("moodyCC", v)} />
+                    <Slider label="Crushed Blacks" value={selClip.settings.crushBlacks || 0} min={0} max={100} onChange={(v) => setClipSetting("crushBlacks", v)} />
+                    <Slider label="Contrast" value={selClip.settings.contrast} min={50} max={200} suffix="%" onChange={(v) => setClipSetting("contrast", v)} />
+                    <Slider label="Saturation" value={selClip.settings.sat} min={0} max={200} suffix="%" onChange={(v) => setClipSetting("sat", v)} />
+                  </div>
+
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] uppercase tracking-wider text-zinc-400">Zoom keyframes</span>
+                      <span className="text-xs font-medium text-zinc-300">Zoom keyframes</span>
                       <button onClick={addKeyframe}
-                        className="text-[10px] px-2 py-1 rounded bg-amber-400/90 text-black font-semibold hover:bg-amber-300 flex items-center gap-1">
+                        className="text-[11px] px-2 py-1 rounded bg-amber-400 text-black font-semibold hover:bg-amber-300 flex items-center gap-1">
                         <Diamond size={10} /> Add at playhead
                       </button>
                     </div>
                     {selClip.kfs.length === 0 && (
-                      <p className="text-[11px] text-zinc-500">No keyframes. Base zoom is used across the clip.</p>
+                      <p className="text-[11px] text-zinc-500">No keyframes yet.</p>
                     )}
                     {[...selClip.kfs].sort((a, b) => a.t - b.t).map((k) => (
                       <div key={k.id} className="flex items-center gap-2 mb-2">
-                        <span className="font-mono text-[10px] text-amber-300 w-12">{k.t.toFixed(2)}s</span>
+                        <span className="font-mono tabular-nums text-[10px] text-amber-300 w-12">{k.t.toFixed(2)}s</span>
                         <input type="range" min={0} max={100} value={k.v} onChange={(e) => updateKf(k.id, Number(e.target.value))}
                           className="flex-1 accent-amber-400" />
-                        <span className="font-mono text-[10px] w-8 text-right">{Math.round(k.v)}</span>
+                        <span className="font-mono tabular-nums text-[10px] w-7 text-right">{Math.round(k.v)}</span>
                         <button onClick={() => deleteKf(k.id)} className="p-1 rounded hover:bg-red-900/60 text-zinc-500 hover:text-red-300">
                           <Trash2 size={11} />
                         </button>
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               )}
 
-              <div className="mt-4 rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-[11px] text-zinc-400">
-                <div className="flex justify-between"><span>Tempo</span><span className="font-mono text-cyan-300">{bpm} BPM</span></div>
-                <div className="flex justify-between mt-1"><span>Clips with effects</span>
-                  <span className="font-mono text-cyan-300">{vSegs.filter((s) => Object.values(s.fx).some((v) => v > 0)).length}</span></div>
+              <div className="mt-4 rounded-lg bg-zinc-900/60 border border-zinc-800 p-2.5 text-xs text-zinc-400">
+                <div className="flex justify-between"><span>Tempo</span><span className="font-mono tabular-nums text-cyan-300">{bpm} BPM</span></div>
+                <div className="flex justify-between mt-1"><span>AI Cutout Engine</span>
+                  <span className="font-mono text-cyan-300">{mpStatus === "ready" ? "MediaPipe Ready" : mpStatus === "loading" ? "Loading WASM" : "Standby"}</span></div>
               </div>
             </aside>
           </div>
 
-          <section className="h-64 shrink-0 border-t border-zinc-800 bg-zinc-950 flex flex-col">
+          {/* Bottom Timeline */}
+          <section className="h-60 shrink-0 border-t border-zinc-800 bg-zinc-950 flex flex-col">
             <div className="h-9 shrink-0 flex items-center gap-2 px-3 border-b border-zinc-800">
-              <button onClick={splitClip} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-xs">
+              <button onClick={splitClip} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-xs whitespace-nowrap">
                 <Scissors size={13} /> Split
               </button>
-              <button onClick={deleteSelection} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-red-900/60 text-xs">
+              <button onClick={deleteSelection} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-red-900/60 text-xs whitespace-nowrap">
                 <Trash2 size={13} /> Delete
               </button>
               <button onClick={() => setAutoRipple((r) => !r)}
-                title="When on, deleting a video clip shifts following clips left to close the gap"
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs ${autoRipple ? "bg-cyan-500 text-black font-semibold" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}>
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap ${autoRipple ? "bg-cyan-400 text-black font-semibold" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}>
                 Auto-Ripple: {autoRipple ? "ON" : "OFF"}
               </button>
+              <button onClick={togglePingPongAll}
+                title="Split clips on beats and enable alternating Ping-Pong Beat Bounce"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-xs text-cyan-300 whitespace-nowrap">
+                <Repeat size={13} /> Ping-Pong Bounce
+              </button>
               <button onClick={autoFindDrop} disabled={aiBusy}
-                title="Scan the whole track for the highest bass energy and beat density, then trim audio to that section"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-fuchsia-600/80 hover:bg-fuchsia-500 text-white text-xs disabled:opacity-60">
-                <Crosshair size={13} /> Auto-Find Drop
+                title="Scan entire song for the hardest 30-second beat drop"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-400/15 border border-cyan-400/40 hover:bg-cyan-400/25 text-cyan-300 text-xs disabled:opacity-60 whitespace-nowrap">
+                <Crosshair size={13} /> Auto-Find 30s Drop
               </button>
               <div className="ml-auto flex items-center gap-2 text-zinc-400">
                 <ZoomOut size={14} />
-                <input type="range" min={10} max={140} value={pxPerSec} onChange={(e) => setPxPerSec(Number(e.target.value))} className="w-32 accent-cyan-400" />
+                <input type="range" min={10} max={140} value={pxPerSec} onChange={(e) => setPxPerSec(Number(e.target.value))} className="w-28 accent-cyan-400" />
                 <ZoomIn size={14} />
               </div>
             </div>
 
             <div className="flex flex-1 min-h-0">
-              <div className="w-20 shrink-0 border-r border-zinc-800 bg-zinc-950 text-[10px] uppercase tracking-wider text-zinc-500">
+              <div className="w-20 shrink-0 border-r border-zinc-800 bg-zinc-950 text-[10px] font-medium text-zinc-500">
                 <div className="h-6" />
                 <div className="h-12 flex items-center justify-between px-2 border-b border-zinc-900">
                   <span>Video</span>
@@ -1851,9 +3256,9 @@
                     {videoMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
                   </button>
                 </div>
-                <div className="h-8 flex items-center px-2 border-b border-zinc-900">FX</div>
+                <div className="h-8 flex items-center px-2 border-b border-zinc-900">Shaders</div>
                 <div className="h-8 flex items-center px-2 border-b border-zinc-900">Text</div>
-                <div className="h-12 flex items-center px-2">Audio</div>
+                <div className="h-11 flex items-center px-2">Audio</div>
               </div>
 
               <div ref={tlScrollRef} className="relative flex-1 overflow-x-auto overflow-y-hidden"
@@ -1869,7 +3274,7 @@
                     {Array.from({ length: Math.ceil(duration) + 1 }).map((_, s) => (
                       <div key={s} className="absolute top-0 h-full" style={{ left: s * pps }}>
                         <div className={`w-px ${s % 5 === 0 ? "h-4 bg-zinc-500" : "h-2 bg-zinc-700"}`} />
-                        {s % 5 === 0 && <span className="absolute top-0 left-1 text-[9px] text-zinc-500 font-mono">{s}s</span>}
+                        {s % 5 === 0 && <span className="absolute top-0 left-1 text-[9px] text-zinc-500 font-mono tabular-nums">{s}s</span>}
                       </div>
                     ))}
                   </div>
@@ -1878,19 +3283,26 @@
                     {vSegs.map((s) => {
                       const m = media.find((x) => x.id === s.mediaId);
                       const sel = selection?.type === "v" && selection.id === s.id;
+                      const flags = [
+                        s.settings.reverse ? "REV" : null,
+                        s.settings.pingPong ? "PP" : null,
+                        s.settings.twixtor ? "TWX" : null,
+                        s.settings.cutout ? "AI" : null,
+                      ].filter(Boolean).join(" · ");
                       return (
                         <div key={s.id}
                           onPointerDown={(e) => { e.stopPropagation(); setSelection({ type: "v", id: s.id }); }}
-                          className={`absolute top-1 bottom-1 rounded-md overflow-hidden border text-[10px] px-3 py-1 truncate cursor-pointer bg-gradient-to-r from-indigo-700/70 to-zinc-800
-                            ${sel ? "border-cyan-300 ring-2 ring-cyan-400/40" : "border-zinc-700"}`}
+                          className={`absolute top-1 bottom-1 rounded-md overflow-hidden border text-[10px] px-3 py-1 truncate cursor-pointer bg-gradient-to-r from-indigo-900/75 to-zinc-800
+                            ${sel ? "border-cyan-300 ring-1 ring-cyan-400/50" : "border-zinc-700"}`}
                           style={{ left: s.start * pps, width: Math.max(10, s.dur * pps) }}>
                           <span onPointerDown={(e) => startTrim(e, s, "l")}
                             className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize bg-white/10 hover:bg-cyan-300/70" />
                           <span onPointerDown={(e) => startTrim(e, s, "r")}
                             className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize bg-white/10 hover:bg-cyan-300/70" />
+                          <div className="truncate font-medium">{m?.name}</div>
+                          {flags && <div className="text-[9px] font-mono text-cyan-300 truncate">{flags}</div>}
                           {hasVideoAudio(m || {}) && <span className="absolute right-3 top-0.5 text-[9px] text-emerald-300">♪</span>}
-                          {s.trans && <span className="absolute right-4 bottom-0.5 text-fuchsia-300"><ArrowRightLeft size={10} /></span>}
-                          {m?.name}
+                          {s.trans && <span className="absolute right-3 bottom-0.5 text-cyan-300"><ArrowRightLeft size={10} /></span>}
                           {sel && s.kfs.map((k) => (
                             <span key={k.id} className="absolute bottom-1 w-2 h-2 rotate-45 bg-amber-300 -translate-x-1/2 pointer-events-none"
                               style={{ left: k.t * pps }} />
@@ -1910,10 +3322,10 @@
                       return (
                         <div key={s.id}
                           onPointerDown={(e) => { e.stopPropagation(); setSelection({ type: "v", id: s.id }); }}
-                          className={`absolute top-1 bottom-1 rounded-md bg-gradient-to-r from-cyan-600/40 to-fuchsia-600/40 border px-2 text-[10px] flex items-center gap-2 overflow-hidden whitespace-nowrap cursor-pointer
-                            ${sel ? "border-cyan-300" : "border-cyan-500/40"}`}
+                          className={`absolute top-1 bottom-1 rounded-md bg-cyan-950/60 border px-2 text-[10px] text-cyan-200 flex items-center gap-1.5 overflow-hidden whitespace-nowrap cursor-pointer
+                            ${sel ? "border-cyan-300" : "border-cyan-800/60"}`}
                           style={{ left: s.start * pps, width: Math.max(10, s.dur * pps) }}>
-                          {all.map((n) => <span key={n} className="px-1.5 rounded bg-black/40">{n}</span>)}
+                          {all.join(" · ")}
                         </div>
                       );
                     })}
@@ -1925,28 +3337,29 @@
                       return (
                         <div key={tx.id}
                           onPointerDown={(e) => { e.stopPropagation(); setSelection({ type: "t", id: tx.id }); }}
-                          className={`absolute top-1 bottom-1 rounded bg-fuchsia-600/60 text-[10px] px-2 flex items-center truncate cursor-pointer ${sel ? "ring-2 ring-fuchsia-300" : ""}`}
+                          className={`absolute top-1 bottom-1 rounded bg-sky-800/60 border border-sky-600/60 text-[10px] px-2 flex items-center gap-1 truncate cursor-pointer ${sel ? "ring-1 ring-cyan-300" : ""}`}
                           style={{ left: tx.start * pps, width: Math.max(4, tx.dur * pps) }}>
-                          {tx.text}
+                          <span className="font-mono text-[9px] text-cyan-300">{tx.layer === "behind" ? "BEHIND" : "FRONT"}</span>
+                          <span className="truncate">{tx.text}</span>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="relative h-12">
+                  <div className="relative h-11">
                     {aSegs.map((s) => {
                       const m = media.find((x) => x.id === s.mediaId);
                       const sel = selection?.type === "a" && selection.id === s.id;
                       return (
                         <div key={s.id}
                           onPointerDown={(e) => { e.stopPropagation(); setSelection({ type: "a", id: s.id }); }}
-                          className={`absolute top-1 bottom-1 rounded-md bg-emerald-900/50 border text-[10px] px-2 py-1 truncate cursor-pointer ${sel ? "border-emerald-300" : "border-emerald-800"}`}
+                          className={`absolute top-1 bottom-1 rounded-md bg-emerald-950/60 border text-[10px] px-2 py-1 truncate cursor-pointer ${sel ? "border-emerald-300" : "border-emerald-800"}`}
                           style={{ left: s.start * pps, width: Math.max(4, s.dur * pps) }}>
                           {m?.name}
                           {m?.beats?.map((b, i) => {
                             const local = b - s.off;
                             if (local < 0 || local > s.dur) return null;
-                            return <span key={i} className="absolute bottom-0 w-px h-2 bg-emerald-300"
+                            return <span key={i} className="absolute bottom-0 w-px h-2 bg-emerald-400"
                               style={{ left: local * pps }} />;
                           })}
                         </div>
@@ -1964,7 +3377,7 @@
           </section>
 
           {toast && (
-            <div className="fixed bottom-72 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-xs shadow-xl">
+            <div className="fixed bottom-64 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-xs shadow-xl z-50">
               {toast}
             </div>
           )}
