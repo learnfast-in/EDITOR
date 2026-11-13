@@ -20,9 +20,6 @@
   <div id="root"></div>
 
   <script>
-    /* Lucide UMD exposes window.lucide with createElement(name) returning an SVG node.
-       This wrapper builds a React component per icon name, so the app code can keep
-       its <Icon size={n} className="..."/> usage without any import statements. */
     window.LucideIcon = function makeIcon(name) {
       return function Icon({ size = 24, className = "", strokeWidth = 2, ...rest }) {
         const ref = React.useRef(null);
@@ -51,7 +48,6 @@
   <script type="text/babel" data-presets="react">
     const { useEffect, useMemo, useRef, useState } = React;
 
-    /* ---------- Lucide icon components (no imports needed) ---------- */
     const mk = (n) => window.LucideIcon(n);
     const Play = mk("play");
     const Pause = mk("pause");
@@ -77,6 +73,7 @@
     const Volume2 = mk("volume-2");
     const VolumeX = mk("volume-x");
     const Diamond = mk("diamond");
+    const Crosshair = mk("crosshair");
 
     /* ============================ CONSTANTS ============================ */
 
@@ -129,6 +126,9 @@
     const DEFAULT_SETTINGS = { zoom: 0, shake: 0, blur: 0, glow: 0, rgb: 0, contrast: 100, sat: 100, speed: 1, ramp: 0 };
 
     const ASPECTS = { "16:9": [16, 9], "9:16": [9, 16], "1:1": [1, 1] };
+
+    /* Trigger words that activate the intensity boost and auto-split */
+    const INTENSE_RE = /intense|hardcore|phonk|funk|sem deroma/i;
 
     const TEMPLATES = [
       {
@@ -196,8 +196,8 @@
       settings: { ...DEFAULT_SETTINGS }, fx: {}, grade: {}, kfs: [],
     });
     const cloneLook = (c) => ({ settings: { ...c.settings }, fx: { ...c.fx }, grade: { ...c.grade } });
+    const segsEnd = (arr) => arr.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
 
-    /* Zoom keyframes: smoothstep interpolation between clip-local keys */
     function kfZoom(kfs, t) {
       if (!kfs.length) return null;
       const s = [...kfs].sort((a, b) => a.t - b.t);
@@ -259,7 +259,6 @@
       { id: "d3", name: "Spin Shapes (demo)", kind: "proc", gen: "shapes", duration: 12 },
     ];
 
-    /* Procedural 128 BPM kick/hat loop, plus its exact beat grid */
     function makeBeatBuffer(bpm, secs) {
       const sr = 44100, len = Math.floor(sr * secs);
       const buffer = new AudioBuffer({ length: len, sampleRate: sr, numberOfChannels: 1 });
@@ -282,40 +281,144 @@
       return { buffer, beats };
     }
 
-    /* Beat detection: one-pole low-pass (bass band) energy envelope, peak picking */
-    function detectBeats(buf) {
+    /* Bass-band energy envelope: one-pole low-pass, RMS per 20 ms hop */
+    function bassEnvelope(buf) {
       const data = buf.getChannelData(0), sr = buf.sampleRate;
-      const win = Math.floor(sr * 0.02);
+      const hop = 0.02;
+      const win = Math.max(1, Math.floor(sr * hop));
       const a = 1 - Math.exp((-2 * Math.PI * 150) / sr);
-      const env = [];
-      let y = 0;
+      const env = new Float32Array(Math.ceil(data.length / win));
+      let y = 0, k = 0;
       for (let i = 0; i < data.length; i += win) {
         const end = Math.min(i + win, data.length);
         let s = 0;
         for (let j = i; j < end; j++) { y += a * (data[j] - y); s += y * y; }
-        env.push(Math.sqrt(s / (end - i)));
+        env[k++] = Math.sqrt(s / (end - i));
       }
-      const mean = env.reduce((p, c) => p + c, 0) / env.length;
-      const sd = Math.sqrt(env.reduce((p, c) => p + (c - mean) ** 2, 0) / env.length);
+      return { env, hop };
+    }
+
+    /* Peak picking on the envelope with an adaptive threshold */
+    function peaksFromEnv({ env, hop }) {
+      const n = env.length;
+      let mean = 0;
+      for (let i = 0; i < n; i++) mean += env[i];
+      mean /= Math.max(1, n);
+      let v = 0;
+      for (let i = 0; i < n; i++) v += (env[i] - mean) ** 2;
+      const sd = Math.sqrt(v / Math.max(1, n));
       const thr = mean + 1.2 * sd;
       const beats = [];
       let last = -1;
-      for (let i = 1; i < env.length - 1; i++) {
+      for (let i = 1; i < n - 1; i++) {
         if (env[i] > thr && env[i] >= env[i - 1] && env[i] >= env[i + 1]) {
-          const t = i * 0.02;
+          const t = i * hop;
           if (t - last >= 0.25) { beats.push(t); last = t; }
         }
       }
       return beats;
     }
 
-    function estimateBpm(beats) {
-      if (beats.length < 3) return 120;
-      const diffs = [];
-      for (let i = 1; i < beats.length; i++) diffs.push(beats[i] - beats[i - 1]);
-      diffs.sort((a, b) => a - b);
-      const med = diffs[diffs.length >> 1];
-      return clamp(Math.round(60 / med), 60, 200);
+    function detectBeats(buf) {
+      return peaksFromEnv(bassEnvelope(buf));
+    }
+
+    /* Sliding-window search over the whole track.
+       Score = normalised bass energy (60%) + normalised beat density (40%). */
+    function findBestDrop(buf, windowSec) {
+      const envObj = bassEnvelope(buf);
+      const { env, hop } = envObj;
+      const beats = peaksFromEnv(envObj);
+      const dur = buf.duration;
+      const W = Math.min(windowSec, dur);
+      const wf = Math.max(1, Math.round(W / hop));
+
+      const P = new Float64Array(env.length + 1);
+      for (let i = 0; i < env.length; i++) P[i + 1] = P[i] + env[i];
+
+      const step = 0.5;
+      const maxStart = Math.max(0, dur - W);
+      const cands = [];
+      for (let st = 0; st <= maxStart + 1e-6; st += step) {
+        const s = Math.floor(st / hop);
+        const e = Math.min(env.length, s + wf);
+        const energy = (P[e] - P[s]) / Math.max(1, e - s);
+        let count = 0;
+        for (let i = 0; i < beats.length; i++) {
+          if (beats[i] >= st && beats[i] < st + W) count++;
+        }
+        cands.push({ start: st, energy, density: count / W, count });
+      }
+      if (!cands.length) return { start: 0, score: 0, count: 0, W };
+
+      const maxE = Math.max(1e-9, ...cands.map((c) => c.energy));
+      const maxD = Math.max(1e-9, ...cands.map((c) => c.density));
+      let best = cands[0];
+      for (const c of cands) {
+        c.score = 0.6 * (c.energy / maxE) + 0.4 * (c.density / maxD);
+        if (c.score > best.score) best = c;
+      }
+      return { start: best.start, score: best.score, count: best.count, W };
+    }
+
+    /* Timeline-space beat markers from the audio track */
+    function beatsTimeline(aSegs, media) {
+      const out = [];
+      aSegs.forEach((a) => {
+        const m = media.find((x) => x.id === a.mediaId);
+        if (!m || !m.beats) return;
+        m.beats.forEach((b) => {
+          if (b >= a.off && b < a.off + a.dur) out.push(a.start + (b - a.off));
+        });
+      });
+      return out.sort((x, y) => x - y);
+    }
+
+    /* Auto-split clips longer than 2 s on every 2nd beat marker */
+    function splitOnBeats(segs, beatsTL) {
+      let budget = 200;
+      const out = [];
+      for (const s of segs) {
+        if (s.dur < 2 || budget <= 0) { out.push(s); continue; }
+        const cuts = beatsTL
+          .filter((b) => b > s.start + 0.05 && b < s.start + s.dur - 0.05)
+          .filter((_, i) => i % 2 === 1)
+          .slice(0, budget);
+        budget -= cuts.length;
+        let cur = s;
+        for (const c of cuts) {
+          const localCut = c - cur.start;
+          if (localCut <= 0.05 || localCut >= cur.dur - 0.05) continue;
+          const left = { ...cur, dur: localCut, kfs: cur.kfs.filter((k) => k.t < localCut) };
+          const right = {
+            ...cur, id: uid(), start: c, dur: cur.dur - localCut,
+            off: cur.off + localCut, trans: null,
+            kfs: cur.kfs.filter((k) => k.t >= localCut).map((k) => ({ ...k, t: k.t - localCut })),
+          };
+          out.push(left);
+          cur = right;
+        }
+        out.push(cur);
+      }
+      return out;
+    }
+
+    /* Intensity boost: doubles the main hard-hitting parameters, capped at 100 */
+    function boostIntensity(r) {
+      const b = (v) => Math.min(100, Math.round((v || 0) * 2));
+      const settings = { ...r.settings, shake: b(r.settings.shake), rgb: b(r.settings.rgb) };
+      const fx = { ...r.fx };
+      ["shake", "bassZoom", "flash", "rgb"].forEach((k) => { if (fx[k]) fx[k] = b(fx[k]); });
+      if (!fx.shake && settings.shake === 0) fx.shake = 60;
+      if (!fx.bassZoom) fx.bassZoom = 70;
+      if (!fx.flash) fx.flash = 60;
+      return { ...r, settings, fx, label: `${r.label} · 2× intensity` };
+    }
+
+    const barLen = (bpm) => 240 / bpm;
+    function warp(x, ramp, P) {
+      if (!ramp) return x;
+      return x - ramp * 0.4 * (P / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / P);
     }
 
     function sinceBeat(beats, x) {
@@ -327,11 +430,13 @@
       return idx < 0 ? 9 : x - beats[idx];
     }
 
-    /* Velocity curve: monotonic remap of time within a bar (ramp in 0..1) */
-    const barLen = (bpm) => 240 / bpm;
-    function warp(x, ramp, P) {
-      if (!ramp) return x;
-      return x - ramp * 0.4 * (P / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / P);
+    function estimateBpm(beats) {
+      if (beats.length < 3) return 120;
+      const diffs = [];
+      for (let i = 1; i < beats.length; i++) diffs.push(beats[i] - beats[i - 1]);
+      diffs.sort((a, b) => a - b);
+      const med = diffs[diffs.length >> 1];
+      return clamp(Math.round(60 / med), 60, 200);
     }
 
     /* ============================ ENGINE ============================ */
@@ -380,7 +485,6 @@
       return E.ctx;
     }
 
-    /* Route a video element's own audio into the graph once (createMediaElementSource is single-use per element) */
     function wireVideoAudio(E, id, el) {
       if (E.vAudio.has(id)) return;
       const c = ensureCtx(E);
@@ -511,14 +615,12 @@
         E.lastSeg = segId;
       }
 
-      /* Per-clip configuration: each clip carries its own look */
       const st = seg ? seg.settings : DEFAULT_SETTINGS;
       const fxs = seg ? seg.fx : {};
       const gr = seg ? seg.grade : {};
       const fxv = (k) => (fxs[k] || 0) / 100;
       const local = seg ? t - seg.start : 0;
 
-      /* 1. Source frame */
       sg.setTransform(1, 0, 0, 1, 0, 0);
       sg.fillStyle = "#000"; sg.fillRect(0, 0, W, H);
       const m = seg && media.find((x) => x.id === seg.mediaId);
@@ -546,7 +648,6 @@
       }
       E.els.forEach((el, id) => { if (!(m && m.id === id) && !el.paused) el.pause(); });
 
-      /* 2. Beat-locked transform: bass zoom, damped spring shake, keyframed zoom, Ken Burns */
       const shakeAmp = (st.shake / 100) * 28 + fxv("shake") * 32;
       const decay = Math.exp(-bi.since * 9);
       const dx = Math.sin(t * 67) * shakeAmp * decay;
@@ -564,7 +665,6 @@
       g.restore();
       g.filter = "none";
 
-      /* 3. Transition blend against the snapshot of the previous segment */
       if (seg && seg.trans) {
         const p = local / seg.trans.dur;
         if (p >= 0 && p < 1) {
@@ -574,7 +674,6 @@
         }
       }
 
-      /* 4. Post effects (per clip) */
       const rgb = st.rgb / 100 + fxv("rgb");
       const glow = st.glow / 100 + fxv("glow");
       const needCopy = rgb > 0 || fxv("glitch") > 0 || fxv("kaleido") > 0 || fxv("radial") > 0;
@@ -677,7 +776,6 @@
         g.fillStyle = "#000"; g.fillRect(0, 0, W, bar); g.fillRect(0, H - bar, W, bar);
       }
 
-      /* 5. Text overlays (global) */
       E.bounds = [];
       for (const tx of texts) {
         if (t < tx.start || t >= tx.start + tx.dur) continue;
@@ -752,7 +850,6 @@
       if (E.play.playing) playFrom(E, E.tl);
     }
 
-    /* Master clock: AudioContext.currentTime drives the timeline, rAF renders each frame */
     function tick(E) {
       if (E.play.playing) {
         const t = E.play.startTL + (E.ctx.currentTime - E.play.startCtx);
@@ -824,11 +921,10 @@
       return { settings, fx, grade, texts, label: String(r.label || "AI Director") };
     }
 
-    /* Offline prompt parser: picks a template, then keyword tweaks */
     function parsePrompt(text) {
       const p = text.toLowerCase();
       const has = (...w) => w.some((x) => p.includes(x));
-      const k = has("heavy", "intense", "extreme", "hard", "max") ? 1
+      const k = has("heavy", "intense", "extreme", "hard", "max", "hardcore") ? 1
         : has("subtle", "light", "gentle", "soft", "clean") ? 0.4 : 0.7;
       const key = has("amv", "phonk") ? "amv"
         : has("documentary", "vox", "explain", "newspaper") ? "doc"
@@ -977,7 +1073,6 @@
         [vSegs, aSegs, texts]
       );
 
-      /* Refresh the engine snapshot every render so the rAF loop never reads stale state */
       engine.S = { media, vSegs, aSegs, texts, bpm, duration };
       engine.aspect = aspect;
       engine.draft = draft;
@@ -991,7 +1086,7 @@
       const flash = (msg) => {
         setToast(msg);
         clearTimeout(toastTimer.current);
-        toastTimer.current = setTimeout(() => setToast(""), 2600);
+        toastTimer.current = setTimeout(() => setToast(""), 3200);
       };
 
       const api = {
@@ -1041,7 +1136,6 @@
         return () => window.removeEventListener("keydown", onKey);
       }, []);
 
-      /* ---------- media ingest ---------- */
       const ingestFile = async (file) => {
         const id = uid();
         setLoadingCount((n) => n + 1);
@@ -1091,23 +1185,16 @@
       };
 
       const addToVideo = (m) => {
-        setVSegs((arr) => {
-          const end = arr.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
-          return [...arr, newClip(m.id, end, Math.min(m.duration, 600), 0)];
-        });
+        setVSegs((arr) => [...arr, newClip(m.id, segsEnd(arr), Math.min(m.duration, 600), 0)]);
         flash(`Added ${m.name} to video track`);
       };
 
       const addToAudio = (m) => {
-        setASegs((arr) => {
-          const end = arr.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
-          return [...arr, { id: uid(), mediaId: m.id, start: end, dur: m.duration, off: 0 }];
-        });
+        setASegs((arr) => [...arr, { id: uid(), mediaId: m.id, start: segsEnd(arr), dur: m.duration, off: 0 }]);
         if (m.bpm) setBpm(m.bpm);
         flash(`Added ${m.name} to audio track`);
       };
 
-      /* ---------- clip helpers (per-clip state) ---------- */
       const selClip = selection?.type === "v" ? vSegs.find((s) => s.id === selection.id) || null : null;
       const patchClip = (id, fn) => setVSegs((arr) => arr.map((s) => (s.id === id ? fn(s) : s)));
       const patchSel = (fn) => { if (selClip) patchClip(selClip.id, fn); };
@@ -1115,43 +1202,106 @@
       const setClipFx = (k, v) => patchSel((s) => ({ ...s, fx: { ...s.fx, [k]: v } }));
       const setClipGrade = (k, v) => patchSel((s) => ({ ...s, grade: { ...s.grade, [k]: v } }));
 
-      const applyLook = (look, label) => {
-        const cfg = cloneLook({ settings: { ...DEFAULT_SETTINGS, ...look.settings }, fx: look.fx || {}, grade: look.grade || {} });
-        let scope;
-        if (!vSegs.length) {
-          if (!media[0]) return flash("Add a clip first");
-          setVSegs([{ ...newClip(media[0].id, 0, media[0].duration, 0), ...cloneLook(cfg) }]);
-          scope = "new clip";
-        } else {
-          const ids = selClip ? [selClip.id] : vSegs.map((s) => s.id);
-          setVSegs((arr) => arr.map((s) => (ids.includes(s.id) ? { ...s, ...cloneLook(cfg) } : s)));
-          scope = selClip ? "selected clip" : "all clips";
-        }
-        if (look.texts && look.texts.length) {
-          setTexts((ts) => [...ts, ...look.texts.map((tx, i) => mkText(tx.text, tx.preset, 0.5, 0.8 - i * 0.12, duration))]);
-        }
-        flash(`${label} → ${scope}`);
+      /* Pure: returns a new video track with a look applied to the selected clip (or all clips) */
+      const applyLookToSegs = (segs, cfg, sel) => {
+        const ids = sel ? [sel.id] : segs.map((s) => s.id);
+        return segs.map((s) => (ids.includes(s.id) ? { ...s, ...cloneLook(cfg) } : s));
       };
 
-      const applyTemplate = (t) => applyLook(t, t.name);
+      const applyTemplate = (t) => {
+        const cfg = cloneLook({ settings: { ...DEFAULT_SETTINGS, ...t.settings }, fx: t.fx || {}, grade: t.grade || {} });
+        if (!vSegs.length) {
+          if (!media.some((x) => x.kind !== "audio")) return flash("Add a clip first");
+          const vm = media.find((x) => x.kind !== "audio");
+          setVSegs([{ ...newClip(vm.id, 0, vm.duration, 0), ...cloneLook(cfg) }]);
+        } else {
+          setVSegs(applyLookToSegs(vSegs, cfg, selClip));
+        }
+        if (t.texts && t.texts.length) {
+          setTexts((ts) => [...ts, ...t.texts.map((tx, i) => mkText(tx.text, tx.preset, 0.5, 0.8 - i * 0.12, duration))]);
+        }
+        flash(`${t.name} → ${selClip ? "selected clip" : "all clips"}`);
+      };
+
+      /* Finds the best drop for the given video length and returns the trimmed audio segment */
+      const computeDrop = (videoEnd, audioSegs) => {
+        const cur = audioSegs.find((s) => media.some((m) => m.id === s.mediaId && m.buffer));
+        const m = cur ? media.find((x) => x.id === cur.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
+        if (!m || !m.buffer) return null;
+        const target = videoEnd > 0 ? videoEnd : 30;
+        const W = Math.min(target, m.buffer.duration);
+        const best = findBestDrop(m.buffer, W);
+        const seg = {
+          id: uid(), mediaId: m.id, start: 0,
+          dur: Math.min(W, m.buffer.duration - best.start),
+          off: best.start,
+        };
+        return { seg, m, best };
+      };
+
+      const autoFindDrop = () => {
+        const vEnd = segsEnd(vSegs);
+        const r = computeDrop(vEnd, aSegs);
+        if (!r) return flash("Add an audio track first");
+        setASegs([r.seg]);
+        if (r.m.bpm) setBpm(r.m.bpm);
+        flash(`Best drop at ${fmtTC(r.best.start)} · ${r.best.count} beats in window`);
+      };
 
       const runDirector = async () => {
         if (!prompt.trim()) return flash("Type a prompt first");
         setAiBusy(true);
         try {
+          const intense = INTENSE_RE.test(prompt);
+
           let r = null;
           if (useGemini && geminiKey.trim()) {
             try { r = sanitizeAI(await askGemini(geminiKey.trim(), prompt)); }
             catch (_) { flash("Gemini unavailable — using offline engine"); }
           }
           if (!r) r = parsePrompt(prompt);
-          applyLook(r, `AI Director: ${r.label}`);
+          if (intense) r = boostIntensity(r);
+
+          const cfg = cloneLook({ settings: { ...DEFAULT_SETTINGS, ...r.settings }, fx: r.fx || {}, grade: r.grade || {} });
+
+          let nextV;
+          if (!vSegs.length) {
+            const vm = media.find((x) => x.kind !== "audio");
+            if (!vm) return flash("Add a clip first");
+            nextV = [{ ...newClip(vm.id, 0, vm.duration, 0), ...cloneLook(cfg) }];
+          } else {
+            nextV = applyLookToSegs(vSegs, cfg, selClip);
+          }
+
+          const vEnd = segsEnd(nextV);
+          let nextA = aSegs;
+          let dropMsg = "";
+          const drop = computeDrop(vEnd, aSegs);
+          if (drop) {
+            nextA = [drop.seg];
+            if (drop.m.bpm) setBpm(drop.m.bpm);
+            dropMsg = ` · drop @ ${fmtTC(drop.best.start)}`;
+          }
+
+          let splitMsg = "";
+          if (intense) {
+            const before = nextV.length;
+            nextV = splitOnBeats(nextV, beatsTimeline(nextA, media));
+            splitMsg = ` · ${nextV.length - before} beat cuts`;
+          }
+
+          const newTexts = (r.texts || []).map((tx, i) =>
+            mkText(tx.text, tx.preset, 0.5, 0.8 - i * 0.12, duration));
+
+          setVSegs(nextV);
+          setASegs(nextA);
+          if (newTexts.length) setTexts((ts) => [...ts, ...newTexts]);
+          flash(`AI Director: ${r.label}${dropMsg}${splitMsg}`);
         } finally {
           setAiBusy(false);
         }
       };
 
-      /* ---------- timeline editing ---------- */
       const splitClip = () => {
         const t = engine.tl;
         const target = vSegs.find((s) =>
@@ -1159,10 +1309,7 @@
           (selection?.type === "v" ? s.id === selection.id : true));
         if (!target) return flash("Move the playhead inside a video clip to split");
         const local = t - target.start;
-        const a = {
-          ...target, dur: local,
-          kfs: target.kfs.filter((k) => k.t < local),
-        };
+        const a = { ...target, dur: local, kfs: target.kfs.filter((k) => k.t < local) };
         const b = {
           ...target, id: uid(), start: t, dur: target.dur - local,
           off: target.off + local, trans: null,
@@ -1242,7 +1389,6 @@
 
       const updateText = (id, patch) => setTexts((ts) => ts.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
-      /* ---------- real-time 1080p export ---------- */
       const startExport = async () => {
         if (engine.exporting) return;
         if (!vSegs.length) return flash("Add clips to the timeline first");
@@ -1332,7 +1478,6 @@
       };
       const onCanvasUp = () => { dragTextRef.current = null; };
 
-      /* ---------- derived ---------- */
       const selText = texts.find((t) => selection?.type === "t" && t.id === selection.id);
       const videoMedia = media.filter((m) => m.kind !== "audio");
       const audioMedia = media.filter((m) => m.kind === "audio");
@@ -1340,8 +1485,6 @@
       const pps = pxPerSec;
       const timelineWidth = duration * pps + 200;
       const hasVideoAudio = (m) => engine.vAudio.has(m.id);
-
-      /* ============================ RENDER ============================ */
 
       const renderPanel = () => {
         if (tab === "media") {
@@ -1594,8 +1737,11 @@
                   <Sparkles size={15} className="text-fuchsia-300" /> AI Magic Director
                 </div>
                 <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3}
-                  placeholder='e.g. "Make an intense AMV edit with heavy shakes on bass drops"'
+                  placeholder='e.g. "Intense phonk edit, heavy shakes on bass drops"'
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs outline-none focus:border-fuchsia-500 resize-none" />
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  "intense", "hardcore", "phonk", "funk" or "sem deroma" doubles shake, zoom, flash and RGB and auto-cuts on every 2nd beat.
+                </p>
                 <button onClick={runDirector} disabled={aiBusy}
                   className="mt-2 w-full py-1.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60">
                   {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />} Generate magic edit
@@ -1682,6 +1828,11 @@
                 title="When on, deleting a video clip shifts following clips left to close the gap"
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs ${autoRipple ? "bg-cyan-500 text-black font-semibold" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800"}`}>
                 Auto-Ripple: {autoRipple ? "ON" : "OFF"}
+              </button>
+              <button onClick={autoFindDrop} disabled={aiBusy}
+                title="Scan the whole track for the highest bass energy and beat density, then trim audio to that section"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-fuchsia-600/80 hover:bg-fuchsia-500 text-white text-xs disabled:opacity-60">
+                <Crosshair size={13} /> Auto-Find Drop
               </button>
               <div className="ml-auto flex items-center gap-2 text-zinc-400">
                 <ZoomOut size={14} />
