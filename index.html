@@ -89,13 +89,16 @@
     const mk = (n) => window.LucideIcon(n);
     const Play = mk("play");
     const Pause = mk("pause");
+    const Upload = mk("upload");
     const Sparkles = mk("sparkles");
     const LayoutTemplate = mk("layout-template");
+    const ArrowRightLeft = mk("arrow-right-left");
     const Type = mk("type");
     const Scissors = mk("scissors");
     const Trash2 = mk("trash-2");
     const ZoomIn = mk("zoom-in");
     const ZoomOut = mk("zoom-out");
+    const Download = mk("download");
     const SkipBack = mk("skip-back");
     const SkipForward = mk("skip-forward");
     const Music = mk("music");
@@ -114,6 +117,7 @@
     const Redo2 = mk("redo-2");
     const Maximize2 = mk("maximize-2");
     const Minimize2 = mk("minimize-2");
+    const SlidersHorizontal = mk("sliders-horizontal");
     const Layers = mk("layers");
     const Subtitles = mk("captions");
     const Palette = mk("palette");
@@ -132,7 +136,6 @@
     const WifiOff = mk("wifi-off");
     const FolderOpen = mk("folder-open");
     const ArrowUp = mk("arrow-up");
-    const Eye = mk("eye");
 
     /* ============================ STORAGE KEYS & CONSTANTS ============================ */
 
@@ -140,10 +143,9 @@
     const LS_API_DISMISSED = "suzzzi_api_dismissed";
     const DB_NAME = "suzzzi_edits_db";
     const DB_VERSION = 1;
-    const MIN_CLIP_DUR = 1.4; // Prevents micro-flicker cuts while aligning cleanly to drops
-    const MAX_FLASH_ALPHA = 0.22; // Anti-whiteout cap
-    const MAX_GLOW_ALPHA = 0.20;  // Anti-whiteout cap
-    const MAX_AUDIO_WINDOW = 30;  // Auto-trim long 5-min tracks to best 30s drop
+    const MIN_CLIP_DUR = 1.5; // Prevents micro-flicker cuts
+    const MAX_FLASH_ALPHA = 0.24; // Anti-whiteout cap
+    const MAX_GLOW_ALPHA = 0.22;  // Anti-whiteout cap
 
     const ASPECTS = { "9:16": [9, 16], "16:9": [16, 9], "1:1": [1, 1] };
     const RESOLUTIONS = {
@@ -166,7 +168,7 @@
 
     /* 28 Fast Parametric Mathematical / Canvas Shader Primitives (Zero per-pixel JS loops) */
     const PRIMITIVES = [
-      { id: "motionShake", name: "AE Spring Shake", cat: "Phonk / Nightclub" },
+      { id: "motionShake", name: "Motion-Tile Shake", cat: "Phonk / Nightclub" },
       { id: "rgbSplit", name: "Per-Channel RGB Split", cat: "Glitch" },
       { id: "dirBlur", name: "Directional Motion Blur", cat: "Blur / Lens" },
       { id: "radialBlur", name: "Radial Zoom Blur", cat: "Blur / Lens" },
@@ -174,8 +176,8 @@
       { id: "halftone", name: "Halftone Dot Matrix", cat: "Anime / Comic" },
       { id: "scanlines", name: "VHS CRT Scanlines", cat: "Retro / VHS" },
       { id: "darkMoody", name: "Dark Moody CC LUT", cat: "Football / Sports" },
-      { id: "bassZoom", name: "Beat Punch Zoom", cat: "Phonk / Nightclub" },
-      { id: "impactFlash", name: "Soft Impact Flash", cat: "Trending" },
+      { id: "bassZoom", name: "Bass Pump Zoom", cat: "Phonk / Nightclub" },
+      { id: "impactFlash", name: "Impact White Flash", cat: "Trending" },
       { id: "vhsWobble", name: "VHS Tape Wobble", cat: "Retro / VHS" },
       { id: "glitchSlice", name: "Horizontal Glitch Slice", cat: "Glitch" },
       { id: "kaleido", name: "Mirror Kaleidoscope", cat: "3D Distortion" },
@@ -189,8 +191,8 @@
       { id: "crimsonPhonk", name: "Phonk Crimson Grade", cat: "Phonk / Nightclub" },
       { id: "tealOrange", name: "Teal-Orange Blockbuster", cat: "Trending" },
       { id: "prismFlare", name: "Anamorphic Prism Flare", cat: "Blur / Lens" },
-      { id: "quakeHit", name: "AE Impact Spring", cat: "Football / Sports" },
-      { id: "heartbeat", name: "Heartbeat Punch Zoom", cat: "Trending" },
+      { id: "quakeHit", name: "Heavy Impact Quake", cat: "Football / Sports" },
+      { id: "heartbeat", name: "Heartbeat Pulse Zoom", cat: "Trending" },
       { id: "lightLeak", name: "Warm Light Leak", cat: "Retro / VHS" },
       { id: "speedLines", name: "Anime Speed Lines", cat: "Anime / Comic" },
       { id: "scope239", name: "2.39:1 Cinema Scope", cat: "Football / Sports" },
@@ -212,6 +214,7 @@
       ];
       const filterPrimitives = new Set(["darkMoody", "crimsonPhonk", "tealOrange", "comicInk", "lightLeak", "vignette", "filmGrain", "scope239"]);
 
+      // First add clean base primitives
       PRIMITIVES.forEach((p, idx) => {
         list.push({
           id: `fx_${p.id}`,
@@ -225,6 +228,7 @@
         });
       });
 
+      // Generate 1,212+ rich variations totaling 1,240 items
       let n = 0;
       for (let i = 0; i < 44; i++) {
         for (let j = 0; j < PRIMITIVES.length; j++) {
@@ -270,11 +274,11 @@
 
     const VELOCITY_CURVES = [
       { id: "normal", name: "Normal (1×)", speed: 1, ramp: 0 },
-      { id: "footballFlow", name: "Football S-Curve (2.5×→0.35×)", speed: 0.85, ramp: 0.85 },
-      { id: "montage", name: "Montage Beat Ramp", speed: 1.05, ramp: 0.75 },
-      { id: "hero", name: "Hero Impact Slow-Mo", speed: 0.65, ramp: 0.9 },
-      { id: "bullet", name: "Bullet Burst", speed: 1.25, ramp: 0.8 },
-      { id: "jumpCut", name: "Jump Velocity", speed: 1.0, ramp: 0.95 },
+      { id: "footballFlow", name: "Football Flow (0.7× + Ramp)", speed: 0.72, ramp: 0.65 },
+      { id: "montage", name: "Montage Beat", speed: 1.15, ramp: 0.45 },
+      { id: "hero", name: "Hero Slow-Mo", speed: 0.55, ramp: 0.5 },
+      { id: "bullet", name: "Bullet Burst", speed: 1.35, ramp: 0.75 },
+      { id: "jumpCut", name: "Jump Velocity", speed: 1.05, ramp: 0.85 },
     ];
 
     const TEXT_PRESETS = [
@@ -287,18 +291,15 @@
 
     const DEFAULT_CLIP_SETTINGS = {
       zoom: 0,
-      punchZoom: 0,      // 0..100 -> up to 1.28x beat kick ease-out punch
-      shake: 0,          // AE Damped Harmonic Spring amplitude
+      shake: 0,
       blur: 0,
       glow: 0,
       rgb: 0,
       contrast: 100,
       sat: 100,
       brightness: 100,
-      darkCC: false,     // Cinematic Dark CC (crushed blacks, contrast, teal/crimson split-tone)
       speed: 1,
-      ramp: 0,           // Smooth S-curve velocity ramp intensity (0..1)
-      peakLocal: null,   // Visual action peak timestamp (seconds into clip)
+      ramp: 0,
       reverse: false,
       pingPong: false,
       twixtor: false,
@@ -316,9 +317,9 @@
         name: "Parth Edits Football Flow",
         badge: "Football Flow",
         color: "from-emerald-600 via-teal-700 to-zinc-900",
-        desc: "AE S-Curve velocity (2.5×→0.35×), Cinematic Dark CC, beat punch zoom & text behind player",
-        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 12, punchZoom: 75, shake: 24, glow: 18, contrast: 124, sat: 94, brightness: 94, darkCC: true, speed: 0.85, ramp: 0.85, twixtor: true, cutout: true },
-        fx: { fx_darkMoody: 65, fx_vignette: 55, fx_sapphireGlow: 30 },
+        desc: "0.7× Twixtor slow-mo, dark moody CC, smoothstep zoom & text behind player",
+        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 18, glow: 24, contrast: 124, sat: 92, brightness: 94, speed: 0.75, ramp: 0.65, twixtor: true, cutout: true },
+        fx: { fx_darkMoody: 65, fx_vignette: 55, fx_sapphireGlow: 35 },
         texts: [{ text: "PURE CLASS", preset: "aeKinetic", behindSubject: true, y: 0.52 }],
       },
       {
@@ -326,9 +327,9 @@
         name: "Slayer Edits Hardcore Phonk",
         badge: "Hardcore Phonk",
         color: "from-fuchsia-600 via-red-700 to-black",
-        desc: "1.28× Beat Punch Zoom, AE damped spring shake, RGB split & Dark Phonk CC (zero whiteout)",
-        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 16, punchZoom: 100, shake: 62, rgb: 50, contrast: 130, sat: 112, brightness: 94, darkCC: true, speed: 1.0, ramp: 0.75 },
-        fx: { fx_bassZoom: 85, fx_motionShake: 65, fx_rgbSplit: 55, fx_crimsonPhonk: 45 },
+        desc: "Bass pump zoom, motion-tile shake, RGB split & crimson grade (zero whiteout)",
+        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 28, shake: 52, rgb: 55, contrast: 132, sat: 118, speed: 1.05, ramp: 0.45 },
+        fx: { fx_bassZoom: 80, fx_motionShake: 65, fx_rgbSplit: 60, fx_crimsonPhonk: 45, fx_impactFlash: 40 },
         texts: [{ text: "NO MERCY", preset: "hormozi", behindSubject: false, y: 0.78 }],
       },
       {
@@ -336,9 +337,9 @@
         name: "Wizard Edits Anime Velocity",
         badge: "Anime Velocity",
         color: "from-cyan-500 via-indigo-700 to-violet-950",
-        desc: "S-Curve velocity ramp, radial blur, neon subject outline, Dark CC & speed lines",
-        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 14, punchZoom: 85, shake: 38, blur: 16, glow: 28, rgb: 28, contrast: 122, sat: 128, brightness: 96, darkCC: true, speed: 1.05, ramp: 0.9, cutout: true, twixtor: true },
-        fx: { fx_radialBlur: 50, fx_speedLines: 45, fx_neonEdge: 65 },
+        desc: "Velocity speed ramp, radial blur, neon subject outline & speed lines",
+        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 22, blur: 20, glow: 38, rgb: 25, contrast: 120, sat: 130, speed: 1.15, ramp: 0.8, cutout: true, twixtor: true },
+        fx: { fx_radialBlur: 55, fx_speedLines: 50, fx_neonEdge: 65 },
         texts: [{ text: "OVERDRIVE", preset: "neon", behindSubject: true, y: 0.48 }],
       },
       {
@@ -347,7 +348,7 @@
         badge: "Documentary",
         color: "from-amber-700 via-stone-800 to-zinc-950",
         desc: "35mm film grain, vignette, yellow highlighter sweep & typewriter narration",
-        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 6, contrast: 112, sat: 88, speed: 1, ramp: 0 },
+        settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 8, contrast: 112, sat: 88, speed: 1, ramp: 0 },
         fx: { fx_filmGrain: 40, fx_vignette: 45, fx_lightLeak: 30 },
         texts: [
           { text: "THE UNTOLD STORY", preset: "highlight", behindSubject: false, y: 0.72 },
@@ -356,7 +357,7 @@
       },
     ];
 
-    /* ============================ MATH & PHYSICS HELPERS ============================ */
+    /* ============================ SMALL HELPERS ============================ */
 
     const uid = () => Math.random().toString(36).slice(2, 10);
     const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -409,55 +410,11 @@
         const a = s[i], b = s[i + 1];
         if (t >= a.t && t <= b.t) {
           const u = (t - a.t) / Math.max(1e-6, b.t - a.t);
-          const e = u * u * (3 - 2 * u);
+          const e = u * u * (3 - 2 * u); // Smoothstep
           return a.v + (b.v - a.v) * e;
         }
       }
       return s[s.length - 1].v;
-    }
-
-    /* Exact Cubic-Bezier Ease-Out Solver for AE Punch Zooms (0.16, 1, 0.3, 1) */
-    function cubicBezierY(x, p1x, p1y, p2x, p2y) {
-      const cx = 3 * p1x, bx = 3 * (p2x - p1x) - cx, ax = 1 - cx - bx;
-      const cy = 3 * p1y, by = 3 * (p2y - p1y) - cy, ay = 1 - cy - by;
-      let t = x;
-      for (let i = 0; i < 4; i++) {
-        const xt = ((ax * t + bx) * t + cx) * t - x;
-        const dx = (3 * ax * t + 2 * bx) * t + cx;
-        if (Math.abs(xt) < 1e-4 || Math.abs(dx) < 1e-5) break;
-        t = clamp(t - xt / dx, 0, 1);
-      }
-      return ((ay * t + by) * t + cy) * t;
-    }
-
-    /* After Effects Damped Harmonic Spring Physics (settles within ~200ms) */
-    function aeSpringShake(since) {
-      if (since < 0 || since > 0.45) return 0;
-      return Math.exp(-since * 14) * Math.sin(since * 45);
-    }
-
-    /* Smooth S-Curve Velocity Ramp Integrator: 2.5x fast-forward -> 0.35x slow-mo on impact */
-    function evalSCurveTime(local, dur, baseSpeed, ramp, peakLocal) {
-      const safeDur = Math.max(0.1, dur);
-      if (!ramp || ramp <= 0.01) return local * baseSpeed;
-      const uPeak = clamp((peakLocal != null ? peakLocal : safeDur * 0.48) / safeDur, 0.15, 0.85);
-      const fastMul = 1 + 1.5 * ramp;  // Up to 2.5x leading into action
-      const slowMul = 1 - 0.65 * ramp; // Drops smoothly to 0.35x on impact frame
-      const speedAtU = (u) => {
-        const d = (u - uPeak) / 0.22;
-        const dip = Math.exp(-d * d);
-        return baseSpeed * (fastMul * (1 - dip) + slowMul * dip);
-      };
-      const steps = 16;
-      const uEnd = clamp(local / safeDur, 0, 1);
-      const du = uEnd / steps;
-      let area = 0;
-      for (let i = 0; i < steps; i++) {
-        const u0 = i * du;
-        const u1 = (i + 1) * du;
-        area += 0.5 * (speedAtU(u0) + speedAtU(u1)) * du;
-      }
-      return area * safeDur;
     }
 
     /* ============================ INDEXEDDB PERSISTENCE ============================ */
@@ -468,8 +425,12 @@
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = () => {
           const db = req.result;
-          if (!db.objectStoreNames.contains("projects")) db.createObjectStore("projects", { keyPath: "id" });
-          if (!db.objectStoreNames.contains("mediaBlobs")) db.createObjectStore("mediaBlobs", { keyPath: "id" });
+          if (!db.objectStoreNames.contains("projects")) {
+            db.createObjectStore("projects", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("mediaBlobs")) {
+            db.createObjectStore("mediaBlobs", { keyPath: "id" });
+          }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
@@ -556,6 +517,7 @@
         grd.addColorStop(1, "#0a331d");
         g.fillStyle = grd;
         g.fillRect(0, 0, w, h);
+        // Stadium spotlights
         for (let i = 0; i < 3; i++) {
           const sx = w * (0.2 + i * 0.3) + Math.sin(t * 0.8 + i) * w * 0.05;
           const beam = g.createRadialGradient(sx, h * 0.12, 2, sx, h * 0.65, h * 0.55);
@@ -564,6 +526,7 @@
           g.fillStyle = beam;
           g.fillRect(0, 0, w, h);
         }
+        // Moving striker silhouette
         const px = w * 0.5 + Math.sin(t * 1.4) * w * 0.16;
         const py = h * 0.58 + Math.abs(Math.sin(t * 3.2)) * -h * 0.04;
         g.fillStyle = "#080b10";
@@ -589,6 +552,7 @@
         for (let i = -8; i <= 8; i++) {
           g.beginPath(); g.moveTo(w / 2, hy); g.lineTo(w / 2 + i * w * 0.14, h); g.stroke();
         }
+        // Center silhouette for cutout test
         g.fillStyle = "#090910";
         g.beginPath(); g.arc(w * 0.5, h * 0.38, h * 0.08, 0, Math.PI * 2); g.fill();
         g.beginPath(); g.roundRect(w * 0.5 - h * 0.09, h * 0.46, h * 0.18, h * 0.28, 16); g.fill();
@@ -614,7 +578,7 @@
     ];
 
     function makeBeatBuffer(bpm = 128, secs = 30) {
-      const sr = 22050;
+      const sr = 22050; // Lighter sample rate for instant startup on old laptops
       const len = Math.floor(sr * secs);
       const buffer = new AudioBuffer({ length: len, sampleRate: sr, numberOfChannels: 1 });
       const d = buffer.getChannelData(0);
@@ -686,7 +650,7 @@
       return peaksFromEnv(bassEnvelope(buf));
     }
 
-    function findBestDrop(buf, windowSec = MAX_AUDIO_WINDOW) {
+    function findBestDrop(buf, windowSec = 30) {
       const envObj = bassEnvelope(buf);
       const { env, hop } = envObj;
       const beats = peaksFromEnv(envObj);
@@ -722,41 +686,6 @@
       return { start: best.start, score: best.score, count: best.count, W };
     }
 
-    function buildAutoTrimmedAudioSeg(mediaObj, videoDur) {
-      const targetWin = clamp(videoDur > 0 ? videoDur : MAX_AUDIO_WINDOW, 10, MAX_AUDIO_WINDOW);
-      if (mediaObj.buffer && mediaObj.duration > targetWin + 1.5) {
-        const best = findBestDrop(mediaObj.buffer, targetWin);
-        return {
-          seg: {
-            id: uid(),
-            mediaId: mediaObj.id,
-            start: 0,
-            dur: Math.min(targetWin, mediaObj.duration - best.start),
-            off: best.start,
-            volume: 1,
-            muted: false,
-          },
-          trimmedFrom: mediaObj.duration,
-          dropStart: best.start,
-          beatCount: best.count,
-        };
-      }
-      return {
-        seg: {
-          id: uid(),
-          mediaId: mediaObj.id,
-          start: 0,
-          dur: Math.min(mediaObj.duration, MAX_AUDIO_WINDOW),
-          off: 0,
-          volume: 1,
-          muted: false,
-        },
-        trimmedFrom: null,
-        dropStart: 0,
-        beatCount: (mediaObj.beats || []).length,
-      };
-    }
-
     function estimateBpm(beats) {
       if (beats.length < 3) return 128;
       const diffs = [];
@@ -778,6 +707,7 @@
       return out.sort((x, y) => x - y);
     }
 
+    /* Safe beat splitter: enforces MIN_CLIP_DUR = 1.5s so timeline NEVER micro-flickers */
     function splitOnBeatsSafe(segs, beatsTL, minDur = MIN_CLIP_DUR) {
       const out = [];
       for (const s of segs) {
@@ -815,9 +745,10 @@
       return out;
     }
 
-    function splitOnTargetsSafe(segs, targets, minDur = MIN_CLIP_DUR) {
-      const sorted = [...targets].filter((t) => Number.isFinite(t)).sort((a, b) => a - b);
-      return splitOnBeatsSafe(segs, sorted, minDur);
+    const barLen = (bpm) => 240 / bpm;
+    function warp(x, ramp, P) {
+      if (!ramp) return x;
+      return x - ramp * 0.4 * (P / (2 * Math.PI)) * Math.sin((2 * Math.PI * x) / P);
     }
 
     function sinceBeat(beats, x) {
@@ -854,7 +785,7 @@
             outputCategoryMask: true,
           });
         } catch {
-          this.failed = true;
+          this.failed = true; // Cleanly uses fast center-silhouette fallback
         } finally {
           this.loading = false;
         }
@@ -864,6 +795,7 @@
         const mg = maskCanvas.getContext("2d");
         mg.clearRect(0, 0, mw, mh);
 
+        // Throttle segmentation calls on old laptops to ~15fps
         if (this.segmenter && nowMs - this.lastTime > 65) {
           this.lastTime = nowMs;
           try {
@@ -887,12 +819,15 @@
               this._tmp.getContext("2d").putImageData(this._img, 0, 0);
               res.categoryMask.close();
             }
-          } catch {}
+          } catch {
+            // Fallback below
+          }
         }
 
         if (this._tmp) {
           mg.drawImage(this._tmp, 0, 0, mw, mh);
         } else {
+          // Fast zero-lag center silhouette cutout fallback
           mg.save();
           mg.fillStyle = "#fff";
           mg.beginPath();
@@ -904,11 +839,13 @@
           mg.restore();
         }
 
+        // Composite cutout subject using source-in
         mg.save();
         mg.globalCompositeOperation = "source-in";
         mg.drawImage(srcCanvas, 0, 0, mw, mh);
         mg.restore();
 
+        // Optional neon edge aura
         if (outlineWidth > 0) {
           mg.save();
           mg.globalCompositeOperation = "destination-over";
@@ -920,7 +857,7 @@
       },
     };
 
-    /* ============================ ZERO-LAG AFTER EFFECTS ENGINE ============================ */
+    /* ============================ ZERO-LAG ENGINE & 28 SHADER PRIMITIVES ============================ */
 
     function makeEngine() {
       return {
@@ -990,6 +927,7 @@
       const cv = E.canvas;
       if (!cv) return;
       const [aw, ah] = ASPECTS[E.aspect] || [9, 16];
+      // Live preview ALWAYS runs lightweight 480p (854x480) on old laptops unless exporting!
       const longEdge = E.exporting ? (RESOLUTIONS[E.resMode] || 1920) : 854;
       const W = aw >= ah ? longEdge : Math.round((longEdge * aw) / ah);
       const H = aw >= ah ? Math.round((longEdge * ah) / aw) : longEdge;
@@ -1035,11 +973,21 @@
         src.connect(gain);
         gain.connect(E.master);
         E.vAudio.set(id, { src, gain });
-      } catch {}
+      } catch {
+        // Ignore if already connected
+      }
+    }
+
+    function unwireVideoAudio(E, id) {
+      const va = E.vAudio.get(id);
+      if (!va) return;
+      try { va.gain.disconnect(); } catch {}
+      try { va.src.disconnect(); } catch {}
+      E.vAudio.delete(id);
     }
 
     function beatInfo(S, t) {
-      const mk = (since) => ({ since, env: Math.exp(-since / 0.08) });
+      const mk = (since) => ({ since, env: Math.exp(-since / 0.08) }); // 80ms crisp exponential decay
       const a = S.aSegs.find((s) => t >= s.start && t < s.start + s.dur);
       if (a) {
         const m = S.media.find((x) => x.id === a.mediaId);
@@ -1055,42 +1003,23 @@
       g.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
     }
 
-    /* Edge-Mirrored Motion Tile Renderer: prevents black edge bars on AE spring shakes & rotations */
-    function drawWithMotionTile(g, src, W, H, needsTile) {
-      if (!needsTile) {
-        g.drawImage(src, 0, 0, W, H);
-        return;
-      }
-      for (let ty = -1; ty <= 1; ty++) {
-        for (let tx = -1; tx <= 1; tx++) {
-          g.save();
-          const ox = tx === -1 ? 0 : tx === 1 ? 2 * W : 0;
-          const oy = ty === -1 ? 0 : ty === 1 ? 2 * H : 0;
-          g.translate(ox, oy);
-          g.scale(tx !== 0 ? -1 : 1, ty !== 0 ? -1 : 1);
-          g.drawImage(src, 0, 0, W, H);
-          g.restore();
-        }
-      }
-    }
-
     function drawTransition(g, prev, cur, type, p, W, H) {
       g.save();
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.filter = "none";
       g.globalAlpha = 1;
-      const ease = cubicBezierY(p, 0.16, 1, 0.3, 1);
       if (type === "whip") {
-        g.drawImage(prev, -ease * W, 0, W, H);
-        g.drawImage(cur, (1 - ease) * W, 0, W, H);
+        g.drawImage(prev, -p * W, 0, W, H);
+        g.drawImage(cur, (1 - p) * W, 0, W, H);
       } else if (type === "smash") {
         g.drawImage(prev, 0, 0, W, H);
-        const s = 1.38 - 0.38 * ease;
-        g.globalAlpha = ease;
+        const s = 1.45 - 0.45 * p;
+        g.globalAlpha = p;
         g.translate(W / 2, H / 2); g.scale(s, s); g.translate(-W / 2, -H / 2);
-        drawWithMotionTile(g, cur, W, H, s < 1.01);
+        g.drawImage(cur, 0, 0, W, H);
       } else if (type === "flashW") {
         g.drawImage(p < 0.5 ? prev : cur, 0, 0, W, H);
+        // Capped soft transition flash to prevent whiteout
         g.fillStyle = `rgba(255,255,255,${Math.min(MAX_FLASH_ALPHA, Math.sin(p * Math.PI) * MAX_FLASH_ALPHA)})`;
         g.fillRect(0, 0, W, H);
       } else if (type === "glitchCut") {
@@ -1098,12 +1027,12 @@
         const n = 16, seed = Math.floor(p * 12), h = H / n;
         for (let i = 0; i < n; i++) {
           if (i / n >= p) continue;
-          const dx = Math.sin(seed * 13 + i * 7.7) * W * 0.05;
+          const dx = Math.sin(seed * 13 + i * 7.7) * W * 0.06;
           g.drawImage(cur, 0, i * h, W, h, dx, i * h, W, h);
         }
       } else {
         g.drawImage(prev, 0, 0, W, H);
-        g.globalAlpha = ease;
+        g.globalAlpha = p;
         g.drawImage(cur, 0, 0, W, H);
       }
       g.restore();
@@ -1145,12 +1074,12 @@
         g.fillStyle = "#fff";
         g.fillText(shown, 0, 0);
       } else if (tx.preset === "aeKinetic") {
-        const slide = Math.min(1, local / 0.24);
-        const ease = cubicBezierY(slide, 0.16, 1, 0.3, 1);
+        const slide = Math.min(1, local / 0.22);
+        const ease = 1 - Math.pow(1 - slide, 3);
         g.globalAlpha = ease;
         g.translate(cx, cy + (1 - ease) * size * 0.45);
-        g.shadowColor = "rgba(0,0,0,0.8)";
-        g.shadowBlur = size * 0.24;
+        g.shadowColor = "rgba(0,0,0,0.75)";
+        g.shadowBlur = size * 0.22;
         g.fillStyle = "#f8fafc";
         g.fillText(shown, 0, 0);
       } else if (tx.preset === "neon") {
@@ -1166,40 +1095,15 @@
       g.restore();
     }
 
-    /* Cinematic Dark CC LUT pass: crushed blacks, crisp contrast, subtle teal/crimson split-tone */
-    function applyCinematicDarkCC(g, tmp, W, H, crimsonBias = false) {
-      // 1. Subtle deep shadow split-tone (teal or crimson)
-      g.save();
-      g.globalCompositeOperation = "color";
-      g.globalAlpha = 0.18;
-      g.fillStyle = crimsonBias ? "#7f1d1d" : "#0e4d5c";
-      g.fillRect(0, 0, W, H);
-      g.restore();
-
-      // 2. Crisp S-curve micro-contrast & crushed blacks via soft-light self-blend
-      g.save();
-      g.globalCompositeOperation = "soft-light";
-      g.globalAlpha = 0.28;
-      g.drawImage(tmp, 0, 0, W, H);
-      g.restore();
-
-      // 3. Cinematic dark edge vignette (never blows out highlights)
-      const vg = g.createRadialGradient(W / 2, H / 2, H * 0.22, W / 2, H / 2, W * 0.78);
-      vg.addColorStop(0, "rgba(0,0,0,0)");
-      vg.addColorStop(1, "rgba(0,0,0,0.62)");
-      g.fillStyle = vg;
-      g.fillRect(0, 0, W, H);
-    }
-
+    /* Applies any of the 28 parametric shader primitives cleanly with master exposure limiter */
     function applyPrimitive(g, tmp, sm, E, prim, amt, hue, t, W, H, bi, exposureBudget) {
       if (amt <= 0.005) return;
       switch (prim) {
         case "rgbSplit": {
           g.save();
           g.globalCompositeOperation = "screen";
-          g.globalAlpha = Math.min(0.24, 0.22 * amt);
-          const pulse = 0.4 + 0.6 * bi.env;
-          const d = amt * pulse * (W * 0.014);
+          g.globalAlpha = Math.min(0.26, 0.22 * amt);
+          const d = amt * (W * 0.014);
           g.drawImage(tmp, d, 0);
           g.drawImage(tmp, -d, 0);
           g.restore();
@@ -1231,7 +1135,7 @@
         }
         case "strobe": {
           const beat = (t * 4) % 1 < 0.14 ? 1 : 0;
-          const allow = Math.min(MAX_FLASH_ALPHA - exposureBudget.flashUsed, beat * amt * 0.18);
+          const allow = Math.min(MAX_FLASH_ALPHA - exposureBudget.flashUsed, beat * amt * 0.2);
           if (allow > 0.01) {
             exposureBudget.flashUsed += allow;
             g.fillStyle = `rgba(255,255,255,${allow})`;
@@ -1241,8 +1145,8 @@
         }
         case "dirBlur": {
           g.save();
-          g.globalAlpha = 0.20 * amt;
-          const off = amt * 10;
+          g.globalAlpha = 0.22 * amt;
+          const off = amt * 12;
           g.drawImage(tmp, -off, 0);
           g.drawImage(tmp, off, 0);
           g.restore();
@@ -1250,10 +1154,10 @@
         }
         case "radialBlur": {
           g.save();
-          g.globalAlpha = 0.15 * amt;
+          g.globalAlpha = 0.16 * amt;
           for (let i = 1; i <= 2; i++) {
             g.save();
-            const s = 1 + 0.025 * i * amt;
+            const s = 1 + 0.028 * i * amt;
             g.translate(W / 2, H / 2); g.scale(s, s); g.translate(-W / 2, -H / 2);
             g.drawImage(tmp, 0, 0, W, H);
             g.restore();
@@ -1276,7 +1180,7 @@
           break;
         }
         case "scanlines": {
-          g.fillStyle = `rgba(0,0,0,${0.4 * amt})`;
+          g.fillStyle = `rgba(0,0,0,${0.42 * amt})`;
           for (let y = 0; y < H; y += 4) g.fillRect(0, y, W, 2);
           break;
         }
@@ -1294,7 +1198,7 @@
         case "halftone": {
           if (E.patterns.halftone) {
             g.save();
-            g.globalAlpha = 0.5 * amt;
+            g.globalAlpha = 0.55 * amt;
             g.fillStyle = E.patterns.halftone;
             g.fillRect(0, 0, W, H);
             g.restore();
@@ -1312,7 +1216,7 @@
         case "fisheye":
         case "tilt3d": {
           g.save();
-          const ang = prim === "tilt3d" ? Math.sin(t * 2.5) * 0.07 * amt : 0;
+          const ang = prim === "tilt3d" ? Math.sin(t * 2.5) * 0.08 * amt : 0;
           const sc = 1 + 0.08 * amt;
           g.translate(W / 2, H / 2); g.rotate(ang); g.scale(sc, sc); g.translate(-W / 2, -H / 2);
           g.drawImage(tmp, 0, 0, W, H);
@@ -1321,10 +1225,10 @@
         }
         case "darkMoody": {
           g.save();
-          g.fillStyle = `rgba(6, 12, 22, ${0.32 * amt})`;
+          g.fillStyle = `rgba(6, 12, 22, ${0.34 * amt})`;
           g.fillRect(0, 0, W, H);
           g.globalCompositeOperation = "multiply";
-          g.fillStyle = `rgba(185, 200, 220, ${0.42 * amt})`;
+          g.fillStyle = `rgba(185, 200, 220, ${0.45 * amt})`;
           g.fillRect(0, 0, W, H);
           g.restore();
           break;
@@ -1332,8 +1236,8 @@
         case "crimsonPhonk": {
           g.save();
           g.globalCompositeOperation = "overlay";
-          g.globalAlpha = 0.38 * amt;
-          g.fillStyle = `hsl(${(hue + 340) % 360}, 85%, 34%)`;
+          g.globalAlpha = 0.42 * amt;
+          g.fillStyle = `hsl(${(hue + 340) % 360}, 85%, 36%)`;
           g.fillRect(0, 0, W, H);
           g.restore();
           break;
@@ -1341,7 +1245,7 @@
         case "tealOrange": {
           g.save();
           g.globalCompositeOperation = "overlay";
-          g.globalAlpha = 0.42 * amt;
+          g.globalAlpha = 0.45 * amt;
           const gg = g.createLinearGradient(0, 0, W, H);
           gg.addColorStop(0, "#0a7f8c"); gg.addColorStop(1, "#ff8a2a");
           g.fillStyle = gg; g.fillRect(0, 0, W, H);
@@ -1352,7 +1256,7 @@
         case "lightLeak": {
           g.save();
           g.globalCompositeOperation = "screen";
-          g.globalAlpha = Math.min(0.22, 0.22 * amt);
+          g.globalAlpha = Math.min(0.24, 0.24 * amt);
           const lx = W * (0.2 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.9)));
           const lg = g.createRadialGradient(lx, H * 0.2, 4, lx, H * 0.2, W * 0.65);
           lg.addColorStop(0, prim === "prismFlare" ? "#00e5ff" : "#ff8a2a");
@@ -1364,7 +1268,7 @@
         case "speedLines": {
           g.save();
           g.translate(W / 2, H / 2);
-          g.strokeStyle = `rgba(255,255,255,${0.28 * amt})`;
+          g.strokeStyle = `rgba(255,255,255,${0.32 * amt})`;
           g.lineWidth = 2;
           const seed = Math.floor(t * 20);
           for (let i = 0; i < 18; i++) {
@@ -1382,7 +1286,7 @@
         case "vignette": {
           const vg = g.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, W * 0.72);
           vg.addColorStop(0, "rgba(0,0,0,0)");
-          vg.addColorStop(1, `rgba(0,0,0,${0.78 * amt})`);
+          vg.addColorStop(1, `rgba(0,0,0,${0.82 * amt})`);
           g.fillStyle = vg; g.fillRect(0, 0, W, H);
           break;
         }
@@ -1396,14 +1300,14 @@
         case "comicInk": {
           g.save();
           g.globalCompositeOperation = "hard-light";
-          g.globalAlpha = 0.26 * amt;
+          g.globalAlpha = 0.28 * amt;
           g.drawImage(tmp, 0, 0, W, H);
           g.restore();
           break;
         }
         case "neonEdge": {
           g.save();
-          g.strokeStyle = `hsla(${hue}, 95%, 60%, ${0.38 * amt})`;
+          g.strokeStyle = `hsla(${hue}, 95%, 60%, ${0.4 * amt})`;
           g.lineWidth = 6 * amt;
           g.strokeRect(4, 4, W - 8, H - 8);
           g.restore();
@@ -1442,11 +1346,11 @@
       const m = seg && media.find((x) => x.id === seg.mediaId);
       const bi = beatInfo(E.S, t);
 
-      // Compute effective clip time (Reverse, Ping-Pong Bounce, or Smooth S-Curve Velocity Ramp)
+      // Compute effective clip time (Supports Reverse Playback + Ping-Pong + Velocity Ramp)
       let effLocal = local;
       if (seg) {
         if (st.pingPong) {
-          const cycle = (60 / (bpm || 128)) * 2;
+          const cycle = 60 / (bpm || 128) * 2;
           const phase = (local % cycle) / cycle;
           effLocal = phase < 0.5 ? local : Math.max(0, seg.dur - local);
         } else if (st.reverse) {
@@ -1456,8 +1360,8 @@
 
       let drewSrc = false;
       if (m) {
-        const warpedLocal = evalSCurveTime(effLocal, seg.dur, st.speed, st.ramp, st.peakLocal);
-        const xw = clamp(seg.off + warpedLocal, 0, Math.max(0.05, (m.duration || 10) - 0.04));
+        const x = seg.off + effLocal * st.speed;
+        const xw = clamp(warp(x, st.ramp, barLen(bpm) * 4), 0, Math.max(0.05, (m.duration || 10) - 0.04));
         if (m.kind === "proc") {
           PROC_GENS[m.gen](sg, W, H, xw);
           drewSrc = true;
@@ -1481,10 +1385,11 @@
         }
       }
 
+      // Zero-Black-Frame Guarantee: reuse lastValidFrameCanvas whenever seeking or gap occurs
       if (drewSrc) {
         if (st.twixtor && E.hasValidFrame) {
           sg.save();
-          sg.globalAlpha = 0.25;
+          sg.globalAlpha = 0.28;
           sg.drawImage(lastValid, 0, 0, W, H);
           sg.restore();
         }
@@ -1502,49 +1407,40 @@
       });
 
       // Aggregate motion transforms from clip settings + 1,240+ catalog effects
-      let fxShake = 0, fxPunchZoom = 0, hasCrimson = false;
+      let fxShake = 0, fxBassZoom = 0, fxRgb = 0, fxGlow = 0;
       const primQueue = [];
       Object.entries(fxs).forEach(([fxId, val]) => {
         if (!val || val <= 0) return;
         const def = EFFECT_MAP[fxId];
         if (!def) return;
         const amt = val / 100;
-        if (def.primitive === "motionShake" || def.primitive === "quakeHit") fxShake += amt * 26;
-        else if (def.primitive === "bassZoom" || def.primitive === "heartbeat") fxPunchZoom += amt * 0.22;
+        if (def.primitive === "motionShake" || def.primitive === "quakeHit") fxShake += amt * 28;
+        else if (def.primitive === "bassZoom" || def.primitive === "heartbeat") fxBassZoom += amt * 0.18;
         else {
-          if (def.primitive === "crimsonPhonk") hasCrimson = true;
+          if (def.primitive === "rgbSplit") fxRgb += amt;
+          if (def.primitive === "sapphireGlow") fxGlow += amt;
           primQueue.push({ def, amt });
         }
       });
 
-      // 1. AE Damped Harmonic Spring Shake Physics: amplitude * exp(-t * 14) * sin(t * 45)
-      const springAmp = (st.shake / 100) * 30 + fxShake;
-      const springPrimary = aeSpringShake(bi.since);
-      const springSecondary = bi.since <= 0.45 ? Math.exp(-bi.since * 14) * Math.sin(bi.since * 45 + 1.15) : 0;
-      const dx = springAmp * springPrimary;
-      const dy = springAmp * 0.55 * springSecondary;
-
-      // 2. Cubic-Bezier Ease-Out Punch Zoom (1.28x snapping smoothly down to 1.0x on every beat kick)
-      const punchDur = 0.28;
-      const punchU = clamp(bi.since / punchDur, 0, 1);
-      const punchEase = cubicBezierY(punchU, 0.16, 1, 0.3, 1);
-      const maxPunch = clamp((st.punchZoom || 0) / 100 * 0.28 + fxPunchZoom, 0, 0.32);
-      const punchScale = 1 + maxPunch * (1 - punchEase);
-
+      const shakeAmp = (st.shake / 100) * 24 + fxShake;
+      const decay = Math.exp(-bi.since / 0.11);
+      const dx = Math.sin(t * 67) * shakeAmp * decay;
+      const dy = Math.cos(t * 53) * shakeAmp * decay * 0.6;
       const kfVal = seg && seg.kfs && seg.kfs.length ? kfZoom(seg.kfs, local) : null;
       const zoomVal = kfVal !== null ? kfVal : st.zoom;
-      let sc = (1 + (zoomVal / 100) * 0.32) * punchScale;
+      let sc = 1 + (zoomVal / 100) * 0.35 + fxBassZoom * bi.env;
 
       // Clip Intro Animation transform
-      let animAlpha = 1, animY = 0, animRot = springPrimary * (springAmp / 30) * 0.016;
+      let animAlpha = 1, animY = 0, animRot = 0;
       if (seg && st.anim && st.anim !== "none" && local < 0.45) {
         const p = local / 0.45;
-        const ease = cubicBezierY(p, 0.16, 1, 0.3, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
         if (st.anim === "fadeIn") animAlpha = ease;
-        else if (st.anim === "popSmash") sc *= 1.28 - 0.28 * ease;
+        else if (st.anim === "popSmash") sc *= 1.35 - 0.35 * ease;
         else if (st.anim === "slideUp") animY = (1 - ease) * H * 0.25;
-        else if (st.anim === "zoomBounce") sc *= 0.8 + 0.2 * ease + Math.sin(p * Math.PI) * 0.08;
-        else if (st.anim === "whipIn") animRot += (1 - ease) * 0.28;
+        else if (st.anim === "zoomBounce") sc *= 0.75 + 0.25 * ease + Math.sin(p * Math.PI) * 0.1;
+        else if (st.anim === "whipIn") animRot = (1 - ease) * 0.35;
       }
 
       g.save();
@@ -1552,17 +1448,12 @@
       g.fillStyle = "#000";
       g.fillRect(0, 0, W, H);
       g.globalAlpha = animAlpha;
-      const contrastVal = st.darkCC ? Math.max(st.contrast, 122) : st.contrast;
-      const brightVal = st.darkCC ? Math.min(st.brightness || 100, 95) : (st.brightness || 100);
-      g.filter = `brightness(${brightVal}%) contrast(${contrastVal}%) saturate(${st.sat}%)${st.blur > 0 ? ` blur(${(st.blur / 14).toFixed(2)}px)` : ""}`;
+      g.filter = `brightness(${st.brightness || 100}%) contrast(${st.contrast}%) saturate(${st.sat}%)${st.blur > 0 ? ` blur(${(st.blur / 14).toFixed(2)}px)` : ""}`;
       g.translate(W / 2 + dx, H / 2 + dy + animY);
       g.rotate(animRot);
       g.scale(sc, sc);
       g.translate(-W / 2, -H / 2);
-
-      // Edge-Mirrored Motion Tile whenever frame shifts, rotates, or scales below safe margin
-      const needsTile = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(animY) > 0.5 || Math.abs(animRot) > 0.001 || sc < 1.04;
-      drawWithMotionTile(g, src, W, H, needsTile);
+      g.drawImage(src, 0, 0, W, H);
       g.restore();
       g.filter = "none";
 
@@ -1602,13 +1493,11 @@
         }
       }
 
-      // Apply Cinematic Dark CC, Slider RGB/Glow & Catalog Primitives with Master Exposure Limiter
+      // Apply Slider RGB / Glow + Catalog Primitives with Master Exposure Limiter
       const tmp = offc(E, "tmp", true);
       const sm = offc(E, "small", false);
-      const needTmp = st.darkCC || st.rgb > 0 || st.glow > 0 || primQueue.length > 0;
+      const needTmp = st.rgb > 0 || st.glow > 0 || primQueue.length > 0;
       if (needTmp) tmp.getContext("2d", { alpha: false }).drawImage(cv, 0, 0);
-
-      if (st.darkCC) applyCinematicDarkCC(g, tmp, W, H, hasCrimson);
 
       const exposureBudget = { flashUsed: 0, glowUsed: 0 };
       if (st.rgb > 0) applyPrimitive(g, tmp, sm, E, "rgbSplit", st.rgb / 100, 0, t, W, H, bi, exposureBudget);
@@ -1642,27 +1531,6 @@
     }
 
     function drawWave(E) {
-      const c = E.wave;
-      if (!c) return;
-      const g = c.getContext("2d");
-      const W = c.width, H = c.height;
-      g.clearRect(0, 0, W, H);
-      g.strokeStyle = "#00e5ff";
-      g.lineWidth = 1.5;
-      g.beginPath();
-      if (E.an && E.play.playing) {
-        const buf = new Uint8Array(E.an.fftSize);
-        E.an.getByteTimeDomainData(buf);
-        const step = Math.max(1, Math.floor(buf.length / 120));
-        for (let i = 0; i < buf.length; i += step) {
-          const x = (i / buf.length) * W;
-          const y = (buf[i] / 255) * H;
-          i === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
-        }
-      } else {
-        g.moveTo(0, H / 2); g.lineTo(W, H / 2);
-      }
-          function drawWave(E) {
       const c = E.wave;
       if (!c) return;
       const g = c.getContext("2d");
@@ -1759,6 +1627,7 @@
       if (++E.frame % 3 === 0 || !E.play.playing) E.setUi(E.tl);
     }
 
+    /* Live Mini-Preview Renderer for 1,240+ Effect Cards (Lightweight 88x54) */
     function renderMiniPreview(canvas, fxDef, t) {
       if (!canvas) return;
       const g = canvas.getContext("2d", { alpha: false });
@@ -1768,11 +1637,13 @@
       grd.addColorStop(1, `hsl(${(fxDef.hue + 90) % 360}, 70%, 34%)`);
       g.fillStyle = grd;
       g.fillRect(0, 0, W, H);
+      // Sample moving silhouette
       const sx = W * 0.5 + Math.sin(t * 2.2) * (W * 0.14);
       g.fillStyle = "#090b12";
       g.beginPath(); g.arc(sx, H * 0.36, 7, 0, Math.PI * 2); g.fill();
       g.beginPath(); g.roundRect(sx - 9, H * 0.48, 18, 22, 4); g.fill();
 
+      // Primitive preview accent
       const p = fxDef.primitive;
       if (p === "rgbSplit") {
         g.fillStyle = "rgba(0,229,255,0.45)"; g.fillRect(sx - 12, H * 0.48, 4, 18);
@@ -1802,75 +1673,7 @@
       }
     }
 
-    /* ============================ MULTIMODAL FRAME SAMPLING & 100X AI DIRECTOR ============================ */
-
-    /* Extracts 14 evenly spaced visual frames across the user's video + computes pixel motion spikes */
-    async function sampleVideoFrames(E, mainClips, media, frameCount = 14) {
-      const totalDur = Math.max(1, Math.min(MAX_AUDIO_WINDOW, segsEnd(mainClips)));
-      const cw = 256, ch = 144;
-      const cv = document.createElement("canvas");
-      cv.width = cw;
-      cv.height = ch;
-      const g = cv.getContext("2d", { willReadFrequently: true });
-
-      const frames = [];
-      let prevData = null;
-
-      for (let i = 0; i < frameCount; i++) {
-        const t = Number((((i + 0.15) / frameCount) * totalDur).toFixed(2));
-        const seg = mainClips.find((s) => t >= s.start && t < s.start + s.dur) || mainClips[mainClips.length - 1];
-        const m = seg ? media.find((x) => x.id === seg.mediaId) : null;
-
-        g.fillStyle = "#000";
-        g.fillRect(0, 0, cw, ch);
-
-        if (m) {
-          const srcTime = clamp(seg.off + (t - seg.start) * (seg.settings?.speed || 1), 0, Math.max(0.05, (m.duration || 10) - 0.05));
-          if (m.kind === "proc") {
-            PROC_GENS[m.gen](g, cw, ch, srcTime);
-          } else {
-            const el = E.els.get(m.id);
-            if (el) {
-              if (!el.paused) el.pause();
-              if (Math.abs(el.currentTime - srcTime) > 0.04) {
-                el.currentTime = srcTime;
-                await new Promise((r) => {
-                  let done = false;
-                  const fin = () => { if (!done) { done = true; el.removeEventListener("seeked", fin); r(); } };
-                  el.addEventListener("seeked", fin);
-                  setTimeout(fin, 320);
-                });
-              }
-              if (el.readyState >= 2) drawCover(g, el, el.videoWidth, el.videoHeight, cw, ch);
-            }
-          }
-        }
-
-        const img = g.getImageData(0, 0, cw, ch).data;
-        let motion = 0;
-        if (prevData) {
-          let diff = 0, samples = 0;
-          for (let p = 0; p < img.length; p += 16) {
-            diff += Math.abs(img[p] - prevData[p]) + Math.abs(img[p + 1] - prevData[p + 1]) + Math.abs(img[p + 2] - prevData[p + 2]);
-            samples++;
-          }
-          motion = Math.round(diff / Math.max(1, samples * 3));
-        }
-        prevData = new Uint8ClampedArray(img);
-
-        g.fillStyle = "rgba(0,0,0,0.72)";
-        g.fillRect(4, 4, 66, 18);
-        g.fillStyle = "#00e5ff";
-        g.font = "bold 11px monospace";
-        g.fillText(`t=${t.toFixed(1)}s`, 8, 17);
-
-        const base64 = cv.toDataURL("image/jpeg", 0.68).split(",")[1];
-        frames.push({ t, motion, base64 });
-      }
-
-      E.dirty = true;
-      return frames;
-    }
+    /* ============================ 100X MULTIMODAL AI DIRECTOR & REFERENCE CLONER ============================ */
 
     async function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -1891,7 +1694,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
+          generationConfig: { temperature: 0.35, responseMimeType: "application/json" },
         }),
       });
       if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
@@ -1900,63 +1703,45 @@
       return JSON.parse(txt.replace(/```json|```/g, "").trim());
     }
 
-    /* Visual-Motion-Aware Offline AI Director (English + Hinglish) */
-    function buildVisualMotionOfflinePlan(rawText, frames, beatsTL, totalDur) {
+    /* Multilingual English + Hinglish Narrative Offline AI Director */
+    function parseHinglishPrompt(rawText) {
       const p = rawText.toLowerCase();
       const has = (...words) => words.some((w) => p.includes(w));
 
-      const zeroFlash = has("zero flash", "no flash", "bina flash", "flash mat") || true;
+      const zeroFlash = has("zero flash", "no flash", "bina flash", "flash mat");
       const football = has("parth", "football", "soccer", "turf", "messi", "ronaldo", "player", "goal", "sports");
-      const phonk = has("slayer", "phonk", "hardcore", "intense", "funk", "sem deroma", "bass", "drop", "hard", "hype");
-      const anime = has("wizard", "anime", "velocity", "amv", "gojo", "naruto", "speed", "edit");
+      const phonk = has("slayer", "phonk", "hardcore", "intense", "funk", "sem deroma", "bass", "drop", "hard");
+      const anime = has("wizard", "anime", "velocity", "amv", "gojo", "naruto", "speed");
       const doc = has("vox", "documentary", "explain", "story", "kahani");
 
       const reverseBounce = has("reverse bounce", "ping pong", "ping-pong", "reverse", "ulta");
       const behindText = has("piche text", "peeche text", "behind player", "behind subject", "text behind", "subject ke piche");
-      const slowMo = has("slow-mo", "slow mo", "slowmo", "twixtor", "dheere", "slow", "velocity");
+      const slowMo = has("slow-mo", "slow mo", "slowmo", "twixtor", "dheere", "slow");
       const cutout = behindText || has("cutout", "outline", "mask", "aura");
 
-      const sortedMotion = [...frames].filter((f) => f.t > 0.6 && f.t < totalDur - 0.6).sort((a, b) => b.motion - a.motion);
-      const rawPeaks = [];
-      for (const f of sortedMotion) {
-        if (rawPeaks.every((pk) => Math.abs(pk - f.t) >= 2.2)) rawPeaks.push(f.t);
-        if (rawPeaks.length >= 4) break;
-      }
-      const actionPeaks = rawPeaks.map((pk) => {
-        if (!beatsTL.length) return pk;
-        let nearest = beatsTL[0], bestD = Infinity;
-        for (const b of beatsTL) {
-          const d = Math.abs(b - pk);
-          if (d < bestD) { bestD = d; nearest = b; }
-        }
-        return bestD <= 0.6 ? Number(nearest.toFixed(2)) : pk;
-      }).sort((a, b) => a - b);
-
-      const useDarkCC = !doc && (football || phonk || anime || has("dark", "cc", "cinematic", "moody"));
+      // Multi-phase narrative structure (Intro Build-up + Main Drop)
       const phases = [];
       if (football) {
         phases.push({
           name: "Build-Up Flow",
-          ratio: 0.35,
-          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 8, punchZoom: 55, shake: 18, contrast: 122, sat: 94, brightness: 94, darkCC: true, speed: 0.9, ramp: 0.65, twixtor: true, cutout },
+          ratio: 0.38,
+          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 12, contrast: 118, sat: 94, brightness: 94, speed: 0.72, ramp: 0.55, twixtor: true, cutout },
           fx: { fx_darkMoody: 65, fx_vignette: 55 },
         });
         phases.push({
-          name: "Action Drop Climax",
-          ratio: 0.65,
+          name: "Drop Climax",
+          ratio: 0.62,
           settings: {
             ...DEFAULT_CLIP_SETTINGS,
-            zoom: 14,
-            punchZoom: 90,
-            shake: phonk ? 55 : 32,
-            glow: 20,
-            rgb: 24,
-            contrast: 128,
-            sat: 92,
-            brightness: 94,
-            darkCC: true,
-            speed: slowMo ? 0.8 : 0.95,
-            ramp: 0.88,
+            zoom: 24,
+            shake: phonk ? 45 : 22,
+            glow: 26,
+            rgb: 22,
+            contrast: 126,
+            sat: 90,
+            brightness: 95,
+            speed: slowMo ? 0.68 : 0.85,
+            ramp: 0.7,
             twixtor: true,
             pingPong: reverseBounce,
             cutout,
@@ -1964,86 +1749,80 @@
           fx: {
             fx_darkMoody: 70,
             fx_vignette: 50,
-            fx_sapphireGlow: 28,
-            ...(phonk ? { fx_bassZoom: 75 } : {}),
+            fx_sapphireGlow: 40,
+            ...(zeroFlash ? {} : { fx_impactFlash: 35 }),
+            ...(phonk ? { fx_bassZoom: 60 } : {}),
           },
         });
       } else if (anime) {
         phases.push({
           name: "Velocity Charge",
-          ratio: 0.32,
-          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 10, punchZoom: 70, shake: 24, blur: 12, contrast: 122, sat: 124, brightness: 95, darkCC: true, speed: 1.05, ramp: 0.8, cutout, twixtor: true },
-          fx: { fx_speedLines: 40, fx_neonEdge: 55 },
+          ratio: 0.35,
+          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 15, blur: 18, contrast: 118, sat: 125, speed: 1.15, ramp: 0.75, cutout, twixtor: true },
+          fx: { fx_speedLines: 45, fx_neonEdge: 60 },
         });
         phases.push({
-          name: "Overdrive Impact",
-          ratio: 0.68,
-          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 16, punchZoom: 100, shake: 48, glow: 24, rgb: 34, contrast: 128, sat: 130, brightness: 95, darkCC: true, speed: 0.9, ramp: 0.92, pingPong: reverseBounce, cutout, twixtor: true },
-          fx: { fx_radialBlur: 45, fx_bassZoom: 80, fx_neonEdge: 65 },
+          name: "Overdrive Drop",
+          ratio: 0.65,
+          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 28, shake: 35, glow: 34, rgb: 35, contrast: 128, sat: 132, speed: slowMo ? 0.75 : 1.1, ramp: 0.85, pingPong: reverseBounce, cutout, twixtor: true },
+          fx: { fx_radialBlur: 55, fx_bassZoom: 65, fx_neonEdge: 70, ...(zeroFlash ? {} : { fx_impactFlash: 45 }) },
         });
       } else if (doc) {
         phases.push({
           name: "Narrative Intro",
           ratio: 1,
-          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 6, contrast: 112, sat: 88, speed: 1 },
-          fx: { fx_filmGrain: 40, fx_vignette: 45, fx_lightLeak: 28 },
+          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 8, contrast: 112, sat: 88, speed: 1 },
+          fx: { fx_filmGrain: 42, fx_vignette: 48, fx_lightLeak: 28 },
         });
       } else {
+        // Phonk / Universal Hardcore Drop
         phases.push({
           name: "Tension Build",
-          ratio: 0.32,
-          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 10, punchZoom: 60, shake: 20, contrast: 124, sat: 96, brightness: 94, darkCC: useDarkCC, speed: 0.95, ramp: 0.6, cutout },
-          fx: { fx_vignette: 55, fx_darkMoody: 50 },
+          ratio: 0.35,
+          settings: { ...DEFAULT_CLIP_SETTINGS, zoom: 14, contrast: 122, sat: 95, speed: slowMo ? 0.7 : 0.95, ramp: 0.35, cutout },
+          fx: { fx_vignette: 60, fx_darkMoody: 45 },
         });
         phases.push({
-          name: "AE Beat Drop",
-          ratio: 0.68,
+          name: "Beat Drop",
+          ratio: 0.65,
           settings: {
             ...DEFAULT_CLIP_SETTINGS,
-            zoom: 16,
-            punchZoom: 100,
-            shake: phonk ? 64 : 40,
-            rgb: phonk ? 50 : 28,
-            glow: 20,
-            contrast: 130,
-            sat: 110,
-            brightness: 94,
-            darkCC: useDarkCC,
-            speed: slowMo ? 0.82 : 1.0,
-            ramp: 0.85,
+            zoom: 30,
+            shake: phonk ? 55 : 32,
+            rgb: phonk ? 55 : 28,
+            glow: 26,
+            contrast: 132,
+            sat: 118,
+            speed: slowMo ? 0.72 : 1.05,
+            ramp: 0.5,
             pingPong: reverseBounce,
             reverse: !reverseBounce && has("reverse"),
-            twixtor: true,
+            twixtor: slowMo,
             cutout,
           },
           fx: {
-            fx_bassZoom: 85,
-            fx_motionShake: phonk ? 65 : 42,
-            fx_rgbSplit: phonk ? 52 : 28,
-            ...(phonk ? { fx_crimsonPhonk: 38 } : {}),
-            ...(zeroFlash ? {} : { fx_impactFlash: 30 }),
+            fx_bassZoom: 80,
+            fx_motionShake: phonk ? 68 : 42,
+            fx_rgbSplit: phonk ? 60 : 30,
+            ...(phonk ? { fx_crimsonPhonk: 42 } : {}),
+            ...(zeroFlash ? {} : { fx_impactFlash: 48 }),
           },
         });
       }
 
       const quoted = rawText.match(/"([^"]+)"/);
       const textLabel = quoted ? quoted[1] : football ? "LEGACY" : anime ? "LIMITLESS" : doc ? "THE TRUTH" : "UNSTOPPABLE";
-      const firstPeak = actionPeaks[0] ?? 1.5;
       const texts = [
         {
           text: textLabel,
           preset: doc ? "highlight" : football ? "aeKinetic" : anime ? "neon" : "hormozi",
           behindSubject: behindText,
-          start: firstPeak,
-          dur: Math.min(5, Math.max(2.5, totalDur - firstPeak)),
           y: behindText ? 0.48 : 0.76,
         },
       ];
 
       return {
-        label: `${football ? "Parth Football" : anime ? "Anime Velocity" : doc ? "Documentary" : "AE Phonk"} · ${actionPeaks.length} Visual Peaks`,
-        darkCC: useDarkCC,
-        actionPeaks,
+        label: football ? "Parth Football Flow AI" : anime ? "Anime Velocity AI" : doc ? "Documentary AI" : "Phonk Drop AI",
         phases,
         texts,
         splitOnBeats: !doc,
@@ -2086,11 +1865,11 @@
       return {
         label: `Cloned DNA (${darkMood ? "Dark Moody" : "Vibrant"} · ${fastPace ? "Fast Cuts" : "Smooth Flow"})`,
         bpm: fastPace ? 134 : 122,
-        velocityCurve: fastPace ? { speed: 1.0, ramp: 0.78, twixtor: true } : { speed: 0.82, ramp: 0.85, twixtor: true },
-        shakePhysics: { shake: fastPace ? 55 : 24, punchZoom: fastPace ? 90 : 55 },
-        rgbSplit: fastPace ? 48 : 16,
+        velocityCurve: fastPace ? { speed: 1.05, ramp: 0.65, twixtor: false } : { speed: 0.74, ramp: 0.55, twixtor: true },
+        shakePhysics: { shake: fastPace ? 48 : 18, bassZoom: fastPace ? 75 : 40 },
+        rgbSplit: fastPace ? 52 : 15,
         reversePingPong: { reverse: false, pingPong: fastPace },
-        darkCC: { darkCC: darkMood, contrast: darkMood ? 128 : 114, sat: darkMood ? 92 : 118, brightness: darkMood ? 94 : 100, vignette: darkMood ? 65 : 35 },
+        darkCC: { contrast: darkMood ? 128 : 114, sat: darkMood ? 90 : 118, brightness: darkMood ? 92 : 100, vignette: darkMood ? 65 : 35 },
         effects: darkMood ? ["fx_darkMoody", "fx_vignette", "fx_sapphireGlow"] : ["fx_bassZoom", "fx_rgbSplit", "fx_sapphireGlow"],
         textPlacement: { text: "CLONED STYLE", preset: darkMood ? "aeKinetic" : "hormozi", y: 0.52, behindSubject: darkMood },
       };
@@ -2120,7 +1899,7 @@
               <div className="sz-slash absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-transparent via-white/75 to-transparent pointer-events-none" />
             </div>
             <div className="mt-3 text-[11px] uppercase tracking-[0.3em] text-violet-400 text-center font-semibold">
-              Multimodal Vision AI · AE Physics Engine
+              CapCut AI Studio · Zero-Lag Engine
             </div>
             <div className="mt-4 h-1 w-56 mx-auto bg-zinc-900 rounded-full overflow-hidden">
               <div className="sz-bar h-full bg-gradient-to-r from-[#00e5ff] to-[#8b5cf6]" />
@@ -2154,8 +1933,8 @@
                   <Sparkles size={16} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-white">Activate Multimodal Vision AI Director</h2>
-                  <p className="text-[11px] text-zinc-400">One-time setup · Watches your video frames & beat drops</p>
+                  <h2 className="text-sm font-bold text-white">Activate Human-Level AI Director</h2>
+                  <p className="text-[11px] text-zinc-400">One-time setup · Stored securely on your device</p>
                 </div>
               </div>
               <button onClick={() => onCancel(dontAsk)} className="p-1 text-zinc-500 hover:text-white">
@@ -2166,7 +1945,7 @@
             <div className="mb-3 flex items-center justify-between text-xs">
               <span className="text-zinc-300">Paste your free Google Gemini API key:</span>
               <a
-                href="https://aistudio.google.com/apikey"
+                href="https://google.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#00e5ff] hover:underline font-medium"
@@ -2192,7 +1971,7 @@
                 onChange={(e) => setDontAsk(e.target.checked)}
                 className="rounded accent-[#00e5ff]"
               />
-              Don't ask again (use built-in offline visual motion AI)
+              Don't ask again (use built-in offline Hinglish/English AI)
             </label>
 
             <div className="mt-4 flex items-center gap-2">
@@ -2257,6 +2036,8 @@
       );
     }
 
+    /* ============================ LIVE MINI-PREVIEW CARD FOR 1,240+ EFFECTS ============================ */
+
     function EffectCard({ fx, activeVal, animTick, onToggle, onChangeVal }) {
       const cvRef = useRef(null);
       useEffect(() => {
@@ -2316,14 +2097,16 @@
       if (!E.current) E.current = makeEngine();
       const engine = E.current;
 
+      // Splash & Startup API Popup
       const [showSplash, setShowSplash] = useState(true);
       const [apiKey, setApiKey] = useState(() => localStorage.getItem(LS_API_KEY) || "");
       const [showStartupApi, setShowStartupApi] = useState(false);
       const [showApiModal, setShowApiModal] = useState(false);
       const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+      // Screen Router: "home" (CapCut Launchpad) vs "editor" (CapCut Dark Workspace)
       const [screen, setScreen] = useState("home");
-      const [homeTab, setHomeTab] = useState("edit");
+      const [homeTab, setHomeTab] = useState("edit"); // edit | templates | aitools
       const [online, setOnline] = useState(navigator.onLine);
       const [projects, setProjects] = useState([]);
       const [projectId, setProjectId] = useState(() => uid());
@@ -2331,6 +2114,7 @@
       const [editingTitleId, setEditingTitleId] = useState(null);
       const [titleDraft, setTitleDraft] = useState("");
 
+      // Editor State
       const [media, setMedia] = useState([]);
       const [vSegs, setVSegs] = useState([]);
       const [aSegs, setASegs] = useState([]);
@@ -2349,22 +2133,24 @@
       const [exportPct, setExportPct] = useState(0);
       const [toast, setToast] = useState("");
 
+      // 30-Step Undo / Redo History Stack
       const [histIdx, setHistIdx] = useState(0);
       const historyRef = useRef([]);
 
-      const [drawer, setDrawer] = useState(null);
+      // CapCut Contextual Dock & Drawer
+      const [drawer, setDrawer] = useState(null); // null | edit | audio | text | effects | overlay | captions | filters | ai | clone
       const [fxSearch, setFxSearch] = useState("");
       const [fxCategory, setFxCategory] = useState("All");
       const [fxLimit, setFxLimit] = useState(24);
       const [miniTick, setMiniTick] = useState(0);
 
+      // AI Director & Reference Cloner State
       const [aiPrompt, setAiPrompt] = useState("");
       const [aiBusy, setAiBusy] = useState(false);
-      const [aiStatus, setAiStatus] = useState("");
-      const [sampledThumbs, setSampledThumbs] = useState([]);
       const [cloneBusy, setCloneBusy] = useState(false);
       const [clonedDna, setClonedDna] = useState(null);
 
+      // Refs
       const canvasRef = useRef(null);
       const waveRef = useRef(null);
       const tlScrollRef = useRef(null);
@@ -2379,7 +2165,7 @@
       const toastTimer = useRef(0);
 
       const duration = useMemo(
-        () => Math.max(5,
+        () => Math.max(10,
           ...vSegs.map((s) => s.start + s.dur),
           ...aSegs.map((s) => s.start + s.dur),
           ...texts.map((x) => x.start + x.dur)),
@@ -2389,9 +2175,10 @@
       const flash = useCallback((msg) => {
         setToast(msg);
         clearTimeout(toastTimer.current);
-        toastTimer.current = setTimeout(() => setToast(""), 3800);
+        toastTimer.current = setTimeout(() => setToast(""), 3200);
       }, []);
 
+      // Check Online status
       useEffect(() => {
         const up = () => setOnline(true);
         const dn = () => setOnline(false);
@@ -2403,10 +2190,12 @@
         };
       }, []);
 
+      // Load CapCut Project History from IndexedDB
       useEffect(() => {
         dbGetAllProjects().then(setProjects);
       }, []);
 
+      // Show One-Time Startup API Banner right after 1.5s splash ends
       const handleSplashDone = useCallback(() => {
         setShowSplash(false);
         const saved = localStorage.getItem(LS_API_KEY);
@@ -2420,7 +2209,7 @@
         setApiKey(key);
         setShowStartupApi(false);
         setShowApiModal(false);
-        flash("Vision AI Key Active ✓");
+        flash("Human-Level AI Active ✓");
       };
 
       const cancelStartupApi = (dontAskAgain) => {
@@ -2432,9 +2221,10 @@
         localStorage.removeItem(LS_API_KEY);
         setApiKey("");
         setShowApiModal(false);
-        flash("API Key cleared — visual motion AI active");
+        flash("API Key cleared — offline AI active");
       };
 
+      // Push Undo Snapshot (Max 30 steps)
       const pushHistory = useCallback((nextV, nextA, nextT, nextBpm) => {
         const snap = JSON.stringify({
           vSegs: nextV ?? vSegs,
@@ -2477,6 +2267,7 @@
         flash("Redo ↷");
       }, [histIdx, flash]);
 
+      // Sync Engine Refs
       engine.S = { media, vSegs, aSegs, texts, bpm, duration };
       engine.aspect = aspect;
       engine.resMode = resolution;
@@ -2528,6 +2319,7 @@
         }
       }, [aspect, screen]);
 
+      // Main RAF Loop (paused cleanly on Home screen to save old-laptop battery/CPU)
       useEffect(() => {
         if (screen !== "editor") return;
         let raf = 0;
@@ -2539,12 +2331,14 @@
         return () => cancelAnimationFrame(raf);
       }, [screen]);
 
+      // Pause Mini-Preview Thumbnail Animations whenever Effects/Filters drawer is closed!
       useEffect(() => {
         if (screen !== "editor" || (drawer !== "effects" && drawer !== "filters")) return;
         const id = setInterval(() => setMiniTick((t) => (t + 1) % 10000), 90);
         return () => clearInterval(id);
       }, [screen, drawer]);
 
+      // Keyboard Shortcuts (Space, Arrows, Ctrl+Z, Ctrl+Y)
       useEffect(() => {
         const onKey = (e) => {
           if (screen !== "editor") return;
@@ -2567,7 +2361,7 @@
         return () => window.removeEventListener("keydown", onKey);
       }, [screen, undo, redo, api]);
 
-      /* ============================ MEDIA INGESTION & AUTO-TRIM 30S AUDIO ============================ */
+      /* ============================ MEDIA INGESTION & PROJECT PERSISTENCE ============================ */
 
       const ingestFileToState = async (file) => {
         const id = uid();
@@ -2615,11 +2409,10 @@
         const pid = uid();
         const baseMedia = createDemoMedia();
         let nextV = [newClip("d1", 0, 15, 0)];
-        let nextA = [{ id: uid(), mediaId: "da", start: 0, dur: 15, off: 0, volume: 1, muted: false }];
+        let nextA = [{ id: uid(), mediaId: "da", start: 0, dur: 30, off: 0, volume: 1, muted: false }];
         let nextT = [];
         let nextBpm = 128;
         let title = template ? template.name : "New Edit";
-        let autoTrimNote = "";
 
         if (files && files.length > 0) {
           const loaded = [];
@@ -2631,21 +2424,15 @@
           if (vids.length) {
             let cursor = 0;
             nextV = vids.map((m) => {
-              const s = newClip(m.id, cursor, Math.min(m.duration, MAX_AUDIO_WINDOW), 0);
+              const s = newClip(m.id, cursor, Math.min(m.duration, 180), 0);
               cursor += s.dur;
               return s;
             });
             title = vids[0].name.replace(/\.[^.]+$/, "");
-            nextA = [{ id: uid(), mediaId: "da", start: 0, dur: Math.min(cursor, MAX_AUDIO_WINDOW), off: 0, volume: 1, muted: false }];
           }
           if (auds.length) {
-            const vDur = vids.length ? segsEnd(nextV) : MAX_AUDIO_WINDOW;
-            const res = buildAutoTrimmedAudioSeg(auds[0], vDur);
-            nextA = [res.seg];
+            nextA = [{ id: uid(), mediaId: auds[0].id, start: 0, dur: auds[0].duration, off: 0, volume: 1, muted: false }];
             nextBpm = auds[0].bpm || 128;
-            if (res.trimmedFrom) {
-              autoTrimNote = `Auto-trimmed ${fmtMMSS(res.trimmedFrom)} audio to best ${Math.round(res.seg.dur)}s drop @ ${fmtMMSS(res.dropStart)} ✓`;
-            }
           }
           baseMedia.push(...loaded);
         }
@@ -2666,13 +2453,11 @@
         setBpm(nextBpm);
         setSelection(nextV[0] ? { type: "v", id: nextV[0].id } : null);
         setDrawer(initialDrawer);
-        setSampledThumbs([]);
         historyRef.current = [JSON.stringify({ vSegs: nextV, aSegs: nextA, texts: nextT, bpm: nextBpm })];
         setHistIdx(0);
         engine.tl = 0;
         engine.hasValidFrame = false;
         setScreen("editor");
-        if (autoTrimNote) flash(autoTrimNote);
       };
 
       const captureThumbnail = () => {
@@ -2690,7 +2475,12 @@
       const saveCurrentProject = async (customThumb = null) => {
         const thumb = customThumb || captureThumbnail();
         const serialMedia = media.map((m) => ({
-          id: m.id, name: m.name, kind: m.kind, gen: m.gen, duration: m.duration, bpm: m.bpm,
+          id: m.id,
+          name: m.name,
+          kind: m.kind,
+          gen: m.gen,
+          duration: m.duration,
+          bpm: m.bpm,
         }));
         const proj = {
           id: projectId,
@@ -2815,7 +2605,7 @@
             if (m.kind === "video") {
               setVSegs((arr) => {
                 const start = targetTrack === "overlay" ? engine.tl : segsEnd(arr.filter((x) => x.track !== "overlay"));
-                const seg = newClip(m.id, start, Math.min(m.duration, MAX_AUDIO_WINDOW), 0, targetTrack);
+                const seg = newClip(m.id, start, Math.min(m.duration, 180), 0, targetTrack);
                 if (targetTrack === "overlay") seg.settings.blendMode = "screen";
                 const next = [...arr, seg];
                 pushHistory(next, aSegs, texts, bpm);
@@ -2823,18 +2613,13 @@
               });
               flash(`Added ${m.name} to ${targetTrack === "overlay" ? "Overlay" : "Video"} track`);
             } else if (m.kind === "audio") {
-              const vEnd = segsEnd(vSegs.filter((x) => x.track !== "overlay"));
-              const res = buildAutoTrimmedAudioSeg(m, vEnd);
-              const nextA = [res.seg];
-              setASegs(nextA);
+              setASegs((arr) => {
+                const next = [...arr, { id: uid(), mediaId: m.id, start: 0, dur: m.duration, off: 0, volume: 1, muted: false }];
+                pushHistory(vSegs, next, texts, m.bpm || bpm);
+                return next;
+              });
               if (m.bpm) setBpm(m.bpm);
-              if (engine.tl > res.seg.dur) api.seek(0);
-              pushHistory(vSegs, nextA, texts, m.bpm || bpm);
-              if (res.trimmedFrom) {
-                flash(`Auto-trimmed ${fmtMMSS(res.trimmedFrom)} audio to best ${Math.round(res.seg.dur)}s drop @ ${fmtMMSS(res.dropStart)} (${m.bpm} BPM) ✓`);
-              } else {
-                flash(`Audio loaded · ${m.bpm} BPM (${fmtMMSS(res.seg.dur)})`);
-              }
+              flash(`Audio loaded · ${m.bpm} BPM`);
             }
           } catch {
             flash(`Could not load ${f.name}`);
@@ -2890,13 +2675,21 @@
         const m = curA ? media.find((x) => x.id === curA.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
         if (!m || !m.buffer) return flash("Add an audio track first");
         const vEnd = segsEnd(vSegs.filter((x) => x.track !== "overlay"));
-        const res = buildAutoTrimmedAudioSeg(m, vEnd > 0 ? vEnd : MAX_AUDIO_WINDOW);
-        const nextA = [res.seg];
+        const win = Math.min(30, Math.max(vEnd, 12), m.buffer.duration);
+        const best = findBestDrop(m.buffer, win);
+        const nextA = [{
+          id: uid(),
+          mediaId: m.id,
+          start: 0,
+          dur: Math.min(win, m.buffer.duration - best.start),
+          off: best.start,
+          volume: 1,
+          muted: false,
+        }];
         setASegs(nextA);
         if (m.bpm) setBpm(m.bpm);
-        if (engine.tl > res.seg.dur) api.seek(0);
         pushHistory(vSegs, nextA, texts, m.bpm || bpm);
-        flash(`Audio trimmed to 00:00–${fmtMMSS(res.seg.dur)} · Best drop @ ${fmtMMSS(res.dropStart)} (${res.beatCount} beats)`);
+        flash(`Hardest 30s drop found @ ${fmtMMSS(best.start)} (${best.count} beats)`);
         return nextA;
       };
 
@@ -2913,99 +2706,59 @@
         flash(`Beat Synced cleanly (${splitMain.length} clips, min ${MIN_CLIP_DUR}s)`);
       };
 
-      /* 100x Multimodal Vision AI Director: Watches 14 timestamped frames + hears beat drops */
+      /* 100x Multimodal AI Director Execution */
       const executeAIDirector = async () => {
         if (!aiPrompt.trim()) return flash("Describe your edit style first (English or Hinglish)");
-        api.pause();
         setAiBusy(true);
         try {
-          let nextA = aSegs;
-          let activeAudioMedia = null;
-          const curA = aSegs.find((s) => media.some((m) => m.id === s.mediaId && m.buffer));
-          activeAudioMedia = curA ? media.find((x) => x.id === curA.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
-          let mainClips = vSegs.filter((x) => x.track !== "overlay");
-          if (!mainClips.length) mainClips = [newClip("d1", 0, 15, 0)];
-          const rawVEnd = segsEnd(mainClips);
-
-          if (activeAudioMedia && activeAudioMedia.buffer) {
-            setAiStatus("Scanning audio for hardest 30s bass drop...");
-            const trimRes = buildAutoTrimmedAudioSeg(activeAudioMedia, rawVEnd);
-            nextA = [trimRes.seg];
-          }
-          const beatsTL = beatsTimeline(nextA, media);
-          const formattedBeats = beatsTL.slice(0, 64).map((b) => Number(b.toFixed(2)));
-
-          setAiStatus("Watching 14 timestamped frames of your video...");
-          const frames = await sampleVideoFrames(engine, mainClips, media, 14);
-          setSampledThumbs(frames.map((f) => ({ t: f.t, motion: f.motion, src: `data:image/jpeg;base64,${f.base64}` })));
-
           let plan = null;
           if (apiKey && online) {
             try {
-              setAiStatus("Gemini 2.5 Flash analyzing visual action + beat drops...");
-              const motionSummary = frames.map((f) => `[t=${f.t}s motion=${f.motion}]`).join(" ");
-              const sysPrompt = `You are SUZZZI edits, an elite After Effects & CapCut AI Video Director.
-Look closely at these 14 timestamped frames from the user's video and align them with the audio beat timestamps.
-Identify the exact moments of high action, character movement, camera pans, or facial close-ups, and place velocity speed ramps (2.5x fast-forward -> 0.35x slow-mo on impact), smooth 1.28x beat punch zooms, reverse bounces, and AE spring impact shakes directly on those visual action peaks.
-
-Video duration: ${rawVEnd.toFixed(2)}s
-Detected Audio Beat Timestamps (seconds): ${JSON.stringify(formattedBeats)}
-Frame-to-frame motion intensity hints: ${motionSummary}
-User Prompt (English/Hinglish): "${aiPrompt}"
-
-Reply ONLY valid JSON with this exact schema:
+              const sysPrompt = `You are SUZZZI edits 100x Multimodal AI Video Director. Understand English & Hinglish (e.g. "Parth edits jaisa football slow-mo", "player ke piche text", "drop pe reverse bounce", "zero flash").
+Reply ONLY valid JSON:
 {
   "label": "short edit title",
-  "darkCC": true,
-  "zeroFlash": true,
-  "actionPeaks": [2.4, 5.8, 9.2],
+  "splitOnBeats": true,
+  "findDrop": true,
   "phases": [
     {
-      "name": "Build-Up",
-      "ratio": 0.35,
-      "settings": {
-        "zoom": 10, "punchZoom": 65, "shake": 20, "blur": 0, "glow": 15, "rgb": 12,
-        "contrast": 124, "sat": 94, "brightness": 94, "darkCC": true,
-        "speed": 0.9, "ramp": 0.75, "reverse": false, "pingPong": false, "twixtor": true, "cutout": false
-      },
-      "fx": { "fx_darkMoody": 60, "fx_vignette": 55 }
-    },
-    {
-      "name": "Action Drop",
-      "ratio": 0.65,
-      "settings": {
-        "zoom": 14, "punchZoom": 95, "shake": 52, "blur": 8, "glow": 22, "rgb": 32,
-        "contrast": 128, "sat": 108, "brightness": 94, "darkCC": true,
-        "speed": 0.85, "ramp": 0.9, "reverse": false, "pingPong": false, "twixtor": true, "cutout": true
-      },
-      "fx": { "fx_bassZoom": 85, "fx_motionShake": 60, "fx_rgbSplit": 45, "fx_darkMoody": 65 }
+      "name": "Phase 1",
+      "ratio": 0.4,
+      "settings": {"zoom":0-40,"shake":0-60,"blur":0-40,"glow":0-40,"rgb":0-60,"contrast":90-140,"sat":80-140,"brightness":85-110,"speed":0.5-1.5,"ramp":0-0.9,"reverse":false,"pingPong":false,"twixtor":false,"cutout":false},
+      "fx": {"fx_darkMoody":0-100,"fx_bassZoom":0-100,"fx_motionShake":0-100,"fx_rgbSplit":0-100,"fx_sapphireGlow":0-100,"fx_vignette":0-100}
     }
   ],
-  "texts": [
-    { "text": "UPPERCASE", "preset": "aeKinetic", "behindSubject": true, "start": 2.4, "dur": 4.0, "y": 0.5 }
-  ]
+  "texts": [{"text":"UPPERCASE","preset":"aeKinetic|highlight|hormozi|typewriter|neon","behindSubject":false,"y":0.5}]
 }`;
-              const parts = [{ text: sysPrompt }];
-              for (const fr of frames) {
-                parts.push({ text: `[t=${fr.t}s]` });
-                parts.push({ inlineData: { mimeType: "image/jpeg", data: fr.base64 } });
-              }
-              plan = await callGemini25Flash(apiKey, parts);
+              plan = await callGemini25Flash(apiKey, [{ text: `${sysPrompt}\nUser request: ${aiPrompt}` }]);
             } catch {
-              plan = null;
+              // Fall back seamlessly to intelligent Hinglish/English offline AI
             }
           }
-
           if (!plan || !Array.isArray(plan.phases) || !plan.phases.length) {
-            plan = buildVisualMotionOfflinePlan(aiPrompt, frames, formattedBeats, rawVEnd);
+            plan = parseHinglishPrompt(aiPrompt);
           }
 
-          const peaks = Array.isArray(plan.actionPeaks) ? plan.actionPeaks : [];
-          const cutTargets = [...new Set([...peaks, ...formattedBeats])].sort((a, b) => a - b);
-          if (plan.splitOnBeats !== false && cutTargets.length) {
-            mainClips = splitOnTargetsSafe(mainClips, cutTargets, MIN_CLIP_DUR);
+          // 1. Auto-find hardest 30s drop in audio
+          let nextA = aSegs;
+          const curA = aSegs.find((s) => media.some((m) => m.id === s.mediaId && m.buffer));
+          const am = curA ? media.find((x) => x.id === curA.mediaId) : media.find((x) => x.kind === "audio" && x.buffer);
+          if (am && am.buffer && plan.findDrop !== false) {
+            const vEnd = Math.max(12, segsEnd(vSegs.filter((x) => x.track !== "overlay")));
+            const win = Math.min(30, vEnd, am.buffer.duration);
+            const best = findBestDrop(am.buffer, win);
+            nextA = [{ id: uid(), mediaId: am.id, start: 0, dur: Math.min(win, am.buffer.duration - best.start), off: best.start, volume: 1, muted: false }];
           }
 
+          // 2. Clean Beat Split (min 1.5s duration)
+          let mainClips = vSegs.filter((x) => x.track !== "overlay");
+          if (!mainClips.length) mainClips = [newClip("d1", 0, 15, 0)];
+          const beats = beatsTimeline(nextA, media);
+          if (plan.splitOnBeats !== false && beats.length) {
+            mainClips = splitOnBeatsSafe(mainClips, beats, MIN_CLIP_DUR);
+          }
+
+          // 3. Apply Multi-Phase Narrative Settings across clips
           const totalDur = segsEnd(mainClips);
           const phases = plan.phases;
           let accRatio = 0;
@@ -3019,24 +2772,13 @@ Reply ONLY valid JSON with this exact schema:
             let pIdx = boundaries.findIndex((b) => midNorm <= b + 0.01);
             if (pIdx < 0) pIdx = phases.length - 1;
             const ph = phases[pIdx];
-
-            const peakInClip = peaks.find((pk) => pk >= clip.start + 0.15 && pk <= clip.start + clip.dur - 0.15);
-            const peakLocal = peakInClip != null ? peakInClip - clip.start : clip.dur * 0.48;
-
-            const st = {
-              ...DEFAULT_CLIP_SETTINGS,
-              ...(ph.settings || {}),
-              peakLocal,
-              darkCC: ph.settings?.darkCC ?? !!plan.darkCC,
-            };
+            const st = { ...DEFAULT_CLIP_SETTINGS, ...(ph.settings || {}) };
+            // Enforce zero-flash if user mentioned it
             const fxObj = { ...(ph.fx || {}) };
-            if (plan.zeroFlash || /zero flash|no flash|bina flash/i.test(aiPrompt)) {
-              delete fxObj.fx_impactFlash;
-              delete fxObj.fx_strobe;
-            }
+            if (/zero flash|no flash|bina flash/i.test(aiPrompt)) delete fxObj.fx_impactFlash;
             return {
               ...clip,
-              trans: idx > 0 ? { id: pIdx > 0 ? "smash" : "whip", dur: 0.4 } : clip.trans,
+              trans: idx > 0 && pIdx > 0 ? { id: "smash", dur: 0.45 } : clip.trans,
               settings: st,
               fx: fxObj,
             };
@@ -3046,25 +2788,20 @@ Reply ONLY valid JSON with this exact schema:
           const nextV = [...styledMain, ...overlays];
           const nextT = [
             ...texts,
-            ...(plan.texts || []).map((tx) => {
-              const item = mkText(tx.text || "EDIT", tx.preset || "aeKinetic", 0.5, tx.y || 0.52, tx.dur || Math.min(5, totalDur), !!tx.behindSubject);
-              item.start = clamp(tx.start ?? (peaks[0] || 0), 0, Math.max(0, totalDur - 1));
-              return item;
-            }),
+            ...(plan.texts || []).map((tx) => mkText(tx.text || "EDIT", tx.preset || "aeKinetic", 0.5, tx.y || 0.52, Math.min(6, totalDur), !!tx.behindSubject)),
           ];
 
           setVSegs(nextV);
           setASegs(nextA);
           setTexts(nextT);
           pushHistory(nextV, nextA, nextT, bpm);
-          setAiStatus("");
-          flash(`AI Watched ${frames.length} Frames · ${plan.label || "AE Edit Applied"} ✓`);
+          flash(`AI Applied: ${plan.label || "Magic Edit"} (${styledMain.length} beat-synced clips)`);
         } finally {
           setAiBusy(false);
-          setAiStatus("");
         }
       };
 
+      /* Reference Video Cloner (Gemini 2.5 Flash Multimodal inlineData + Offline Frame Analyzer Fallback) */
       const handleCloneReference = async (file) => {
         if (!file) return;
         if (file.size > 20 * 1024 * 1024) {
@@ -3080,11 +2817,11 @@ Reply ONLY valid JSON with this exact schema:
 {
   "label": "style summary",
   "bpm": 128,
-  "velocityCurve": {"speed": 0.5-1.5, "ramp": 0-0.95, "twixtor": true},
-  "shakePhysics": {"shake": 0-80, "punchZoom": 0-100},
+  "velocityCurve": {"speed": 0.5-1.5, "ramp": 0-0.9, "twixtor": true/false},
+  "shakePhysics": {"shake": 0-80, "bassZoom": 0-100},
   "rgbSplit": 0-80,
   "reversePingPong": {"reverse": false, "pingPong": true/false},
-  "darkCC": {"darkCC": true, "contrast": 90-140, "sat": 70-135, "brightness": 85-105, "vignette": 0-80},
+  "darkCC": {"contrast": 80-150, "sat": 60-140, "brightness": 80-115, "vignette": 0-80},
   "effects": ["fx_darkMoody", "fx_bassZoom", "fx_rgbSplit", "fx_sapphireGlow"],
   "textPlacement": {"text": "SAMPLE", "preset": "aeKinetic|hormozi|neon", "y": 0.52, "behindSubject": true/false}
 }`;
@@ -3092,7 +2829,9 @@ Reply ONLY valid JSON with this exact schema:
                 { inlineData: { mimeType: file.type || "video/mp4", data: b64 } },
                 { text: prompt },
               ]);
-            } catch {}
+            } catch {
+              // Fallback to offline frame DNA extractor
+            }
           }
           if (!dna || !dna.velocityCurve) {
             dna = await analyzeReferenceOffline(file);
@@ -3103,6 +2842,7 @@ Reply ONLY valid JSON with this exact schema:
           (dna.effects || []).forEach((id) => {
             if (EFFECT_MAP[id]) fxMap[id] = 65;
           });
+          if (dna.shakePhysics?.bassZoom) fxMap.fx_bassZoom = dna.shakePhysics.bassZoom;
           if (dna.darkCC?.vignette) fxMap.fx_vignette = dna.darkCC.vignette;
 
           const nextV = vSegs.map((s) =>
@@ -3112,16 +2852,14 @@ Reply ONLY valid JSON with this exact schema:
                   ...s,
                   settings: {
                     ...DEFAULT_CLIP_SETTINGS,
-                    speed: dna.velocityCurve?.speed ?? 0.85,
-                    ramp: dna.velocityCurve?.ramp ?? 0.8,
+                    speed: dna.velocityCurve?.speed ?? 0.8,
+                    ramp: dna.velocityCurve?.ramp ?? 0.5,
                     twixtor: !!dna.velocityCurve?.twixtor,
-                    shake: dna.shakePhysics?.shake ?? 32,
-                    punchZoom: dna.shakePhysics?.punchZoom ?? 80,
+                    shake: dna.shakePhysics?.shake ?? 25,
                     rgb: dna.rgbSplit ?? 25,
-                    darkCC: !!dna.darkCC?.darkCC,
-                    contrast: dna.darkCC?.contrast ?? 124,
+                    contrast: dna.darkCC?.contrast ?? 120,
                     sat: dna.darkCC?.sat ?? 95,
-                    brightness: dna.darkCC?.brightness ?? 94,
+                    brightness: dna.darkCC?.brightness ?? 95,
                     reverse: !!dna.reversePingPong?.reverse,
                     pingPong: !!dna.reversePingPong?.pingPong,
                     cutout: !!dna.textPlacement?.behindSubject,
@@ -3153,7 +2891,7 @@ Reply ONLY valid JSON with this exact schema:
         const c = ensureCtx(engine);
         engine.exporting = true;
         engine.savedRes = resolution;
-        engine.resMode = resolution === "480p" ? "1080p" : resolution;
+        engine.resMode = resolution === "480p" ? "1080p" : resolution; // Always crisp up to 1080p export!
         setExporting(true);
         setExportPct(0);
 
@@ -3203,6 +2941,7 @@ Reply ONLY valid JSON with this exact schema:
         setPlaying(true);
       };
 
+      /* Timeline & Canvas Interactions */
       const scrubFromEvent = (e) => {
         const el = tlScrollRef.current;
         if (!el) return;
@@ -3269,6 +3008,7 @@ Reply ONLY valid JSON with this exact schema:
 
       const renderHome = () => (
         <div className="h-screen w-screen flex flex-col bg-[#0b0b0e] text-zinc-100 overflow-hidden">
+          {/* Top Header */}
           <header className="h-14 shrink-0 px-4 flex items-center justify-between border-b border-zinc-900 bg-black">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#00e5ff] to-[#8b5cf6] grid place-items-center text-black font-black text-sm shadow-[0_0_16px_rgba(0,229,255,0.4)]">
@@ -3302,12 +3042,14 @@ Reply ONLY valid JSON with this exact schema:
             </div>
           </header>
 
+          {/* Main Scrollable Home Content */}
           <main className="flex-1 overflow-y-auto px-4 py-4 max-w-5xl w-full mx-auto space-y-5">
             {homeTab === "edit" && (
               <>
+                {/* Quick AI Action Row */}
                 <div className="grid grid-cols-4 gap-2.5">
                   {[
-                    { label: "Vision AI Director", icon: Sparkles, color: "from-fuchsia-500 to-violet-600", act: () => startProject([], null, "ai") },
+                    { label: "AI Magic Director", icon: Sparkles, color: "from-fuchsia-500 to-violet-600", act: () => startProject([], null, "ai") },
                     { label: "Clone Reference", icon: Clapperboard, color: "from-[#00e5ff] to-blue-600", act: () => startProject([], null, "clone") },
                     { label: "AI Cutout", icon: UserCheck, color: "from-emerald-400 to-teal-600", act: () => startProject([], TEMPLATES[0], "edit") },
                     { label: "Auto Beat Sync", icon: Zap, color: "from-amber-400 to-orange-600", act: () => startProject([], TEMPLATES[1], "audio") },
@@ -3328,6 +3070,7 @@ Reply ONLY valid JSON with this exact schema:
                   })}
                 </div>
 
+                {/* CapCut Hero "+ New project" Banner */}
                 <div className="rounded-3xl p-4 bg-[#141418] border border-zinc-800/80">
                   <button
                     onClick={() => heroFileInputRef.current?.click()}
@@ -3337,7 +3080,7 @@ Reply ONLY valid JSON with this exact schema:
                     New project
                   </button>
                   <div className="mt-2.5 flex items-center justify-between text-xs text-zinc-400 px-1">
-                    <span>5-min audio auto-trims to best 30s drop · Vision AI watches your clips</span>
+                    <span>Pick MP4/WebM/MP3 or launch a ready demo timeline</span>
                     <button
                       onClick={() => startProject([])}
                       className="text-[#00e5ff] font-semibold hover:underline"
@@ -3359,6 +3102,7 @@ Reply ONLY valid JSON with this exact schema:
                   />
                 </div>
 
+                {/* CapCut-Style Projects History (IndexedDB) */}
                 <div>
                   <div className="flex items-center justify-between mb-2.5">
                     <h2 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
@@ -3415,12 +3159,27 @@ Reply ONLY valid JSON with this exact schema:
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
-                            <button onClick={() => { setEditingTitleId(p.id); setTitleDraft(p.title); }} title="Rename"
-                              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"><Edit3 size={13} /></button>
-                            <button onClick={() => duplicateProject(p)} title="Duplicate"
-                              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"><Copy size={13} /></button>
-                            <button onClick={() => deleteProject(p.id)} title="Delete"
-                              className="p-1.5 rounded-lg hover:bg-red-950/60 text-zinc-400 hover:text-red-400"><Trash2 size={13} /></button>
+                            <button
+                              onClick={() => { setEditingTitleId(p.id); setTitleDraft(p.title); }}
+                              title="Rename"
+                              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button
+                              onClick={() => duplicateProject(p)}
+                              title="Duplicate"
+                              className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                            >
+                              <Copy size={13} />
+                            </button>
+                            <button
+                              onClick={() => deleteProject(p.id)}
+                              title="Delete"
+                              className="p-1.5 rounded-lg hover:bg-red-950/60 text-zinc-400 hover:text-red-400"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -3432,7 +3191,7 @@ Reply ONLY valid JSON with this exact schema:
 
             {homeTab === "templates" && (
               <div className="space-y-3">
-                <h2 className="text-sm font-bold text-zinc-200">Pro After Effects Templates</h2>
+                <h2 className="text-sm font-bold text-zinc-200">Pro CapCut Templates</h2>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {TEMPLATES.map((tpl) => (
                     <div key={tpl.id} className="rounded-2xl overflow-hidden border border-zinc-800 bg-[#141418]">
@@ -3459,11 +3218,11 @@ Reply ONLY valid JSON with this exact schema:
 
             {homeTab === "aitools" && (
               <div className="space-y-3">
-                <h2 className="text-sm font-bold text-zinc-200">SUZZZI Multimodal Vision AI Suite</h2>
+                <h2 className="text-sm font-bold text-zinc-200">SUZZZI Multimodal AI Suite</h2>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {[
-                    { title: "Multimodal Vision AI Director", desc: "Samples 14 timestamped frames of your video + audio beat timestamps so Gemini 2.5 Flash places S-curve ramps & punch zooms on real action peaks.", act: () => startProject([], null, "ai") },
-                    { title: "Reference Video Style Cloner", desc: "Upload any 5-25s reference edit and clone its BPM, AE spring shakes, RGB split, velocity curve & Dark CC automatically.", act: () => startProject([], null, "clone") },
+                    { title: "100x Multimodal AI Director", desc: "Understands English & Hinglish prompts, finds hardest 30s drop, applies multi-phase edits & text-behind-player.", act: () => startProject([], null, "ai") },
+                    { title: "Reference Video Style Cloner", desc: "Upload any 5-25s reference edit and clone its BPM, shakes, RGB split, velocity curve & dark CC automatically.", act: () => startProject([], null, "clone") },
                     { title: "AI Subject Cutout & Neon Aura", desc: "MediaPipe subject segmentation for glowing player outlines and kinetic text behind subject.", act: () => startProject([], TEMPLATES[0], "edit") },
                     { title: "1,240+ Live-Previewed Effects", desc: "Zero-lag parametric effects & LUTs with live mini-previews across 8 CapCut categories.", act: () => startProject([], null, "effects") },
                   ].map((tool) => (
@@ -3481,6 +3240,7 @@ Reply ONLY valid JSON with this exact schema:
             )}
           </main>
 
+          {/* CapCut Bottom Navigation Bar */}
           <nav className="h-14 shrink-0 border-t border-zinc-900 bg-black flex items-center justify-around">
             {[
               { id: "edit", label: "Edit", icon: Scissors },
@@ -3520,12 +3280,6 @@ Reply ONLY valid JSON with this exact schema:
                 {selClip && (
                   <>
                     <button
-                      onClick={() => setClipSetting("darkCC", !selClip.settings.darkCC, true)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs ${selClip.settings.darkCC ? "bg-violet-600 text-white font-bold" : "bg-zinc-800"}`}
-                    >
-                      Dark CC Grade
-                    </button>
-                    <button
                       onClick={() => setClipSetting("reverse", !selClip.settings.reverse, true)}
                       className={`px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 ${selClip.settings.reverse ? "bg-[#00e5ff] text-black font-bold" : "bg-zinc-800"}`}
                     >
@@ -3554,11 +3308,12 @@ Reply ONLY valid JSON with this exact schema:
               </div>
 
               {!selClip ? (
-                <p className="text-xs text-zinc-500">Tap a video clip on the timeline to adjust AE Velocity S-Curves, Punch Zoom, Spring Shake, Dark CC, or Keyframes.</p>
+                <p className="text-xs text-zinc-500">Tap a video clip on the timeline to adjust Speed, Animations, Cutout, CC, or Keyframes.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Speed / Velocity Curve */}
                   <div className="rounded-xl bg-black/50 border border-zinc-800 p-2.5">
-                    <div className="text-[11px] font-bold text-[#00e5ff] mb-2 flex items-center gap-1"><Gauge size={12} /> S-Curve Velocity & AE Physics</div>
+                    <div className="text-[11px] font-bold text-[#00e5ff] mb-2 flex items-center gap-1"><Gauge size={12} /> Speed & Velocity</div>
                     <div className="flex flex-wrap gap-1 mb-2">
                       {VELOCITY_CURVES.map((vc) => (
                         <button
@@ -3570,16 +3325,13 @@ Reply ONLY valid JSON with this exact schema:
                         </button>
                       ))}
                     </div>
-                    <Slider label="Base Speed" value={selClip.settings.speed} min={0.25} max={2} step={0.05} suffix="×"
+                    <Slider label="Speed" value={selClip.settings.speed} min={0.25} max={2} step={0.05} suffix="×"
                       onChange={(v) => setClipSetting("speed", v)} onCommit={() => pushHistory()} />
-                    <Slider label="S-Curve Ramp (2.5×→0.35×)" value={selClip.settings.ramp} min={0} max={1} step={0.05}
+                    <Slider label="Velocity Ramp" value={selClip.settings.ramp} min={0} max={1} step={0.05}
                       onChange={(v) => setClipSetting("ramp", v)} onCommit={() => pushHistory()} />
-                    <Slider label="Beat Punch Zoom (→1.28×)" value={selClip.settings.punchZoom || 0} min={0} max={100} suffix="%"
-                      onChange={(v) => setClipSetting("punchZoom", v)} onCommit={() => pushHistory()} />
-                    <Slider label="AE Spring Shake" value={selClip.settings.shake} min={0} max={100} suffix="%"
-                      onChange={(v) => setClipSetting("shake", v)} onCommit={() => pushHistory()} />
                   </div>
 
+                  {/* Adjust CC + Animation */}
                   <div className="rounded-xl bg-black/50 border border-zinc-800 p-2.5">
                     <div className="text-[11px] font-bold text-[#00e5ff] mb-2">Adjust CC & Animation</div>
                     <div className="flex flex-wrap gap-1 mb-2">
@@ -3599,10 +3351,9 @@ Reply ONLY valid JSON with this exact schema:
                       onChange={(v) => setClipSetting("sat", v)} onCommit={() => pushHistory()} />
                     <Slider label="Brightness" value={selClip.settings.brightness || 100} min={60} max={130} suffix="%"
                       onChange={(v) => setClipSetting("brightness", v)} onCommit={() => pushHistory()} />
-                    <Slider label="RGB Split" value={selClip.settings.rgb} min={0} max={100} suffix="%"
-                      onChange={(v) => setClipSetting("rgb", v)} onCommit={() => pushHistory()} />
                   </div>
 
+                  {/* Smoothstep Keyframes & Transitions */}
                   <div className="rounded-xl bg-black/50 border border-zinc-800 p-2.5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] font-bold text-amber-300">Smoothstep Keyframes</span>
@@ -3656,7 +3407,7 @@ Reply ONLY valid JSON with this exact schema:
                   onClick={() => addAudioInputRef.current?.click()}
                   className="px-3 py-1.5 rounded-xl bg-[#00e5ff] text-black text-xs font-bold flex items-center gap-1.5"
                 >
-                  <Music size={13} /> Upload Audio (Auto-Trims 5-Min → Best 30s)
+                  <Music size={13} /> Upload Audio (MP3/WAV)
                 </button>
                 <button
                   onClick={autoFindBestDrop}
@@ -3668,7 +3419,7 @@ Reply ONLY valid JSON with this exact schema:
                   onClick={runAutoBeatSync}
                   className="px-3 py-1.5 rounded-xl bg-violet-600 text-white text-xs font-bold flex items-center gap-1.5"
                 >
-                  <Zap size={13} /> Beat Sync (Min {MIN_CLIP_DUR}s Cuts)
+                  <Zap size={13} /> Beat Sync (Min 1.5s Cuts)
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -3676,17 +3427,15 @@ Reply ONLY valid JSON with this exact schema:
                   <button
                     key={m.id}
                     onClick={() => {
-                      const vEnd = segsEnd(vSegs.filter((x) => x.track !== "overlay"));
-                      const res = buildAutoTrimmedAudioSeg(m, vEnd > 0 ? vEnd : MAX_AUDIO_WINDOW);
-                      const nextA = [res.seg];
+                      const nextA = [{ id: uid(), mediaId: m.id, start: 0, dur: m.duration, off: 0, volume: 1, muted: false }];
                       setASegs(nextA);
                       if (m.bpm) setBpm(m.bpm);
                       pushHistory(vSegs, nextA, texts, m.bpm || bpm);
-                      flash(res.trimmedFrom ? `Auto-trimmed ${m.name} to best ${Math.round(res.seg.dur)}s drop` : `Loaded ${m.name}`);
+                      flash(`Loaded ${m.name}`);
                     }}
                     className="px-3 py-1.5 rounded-xl border border-zinc-800 bg-black/50 text-xs flex items-center gap-2 hover:border-[#00e5ff]"
                   >
-                    <Music size={12} className="text-emerald-400" /> {m.name} ({m.bpm || 128} BPM · {fmtMMSS(m.duration)})
+                    <Music size={12} className="text-emerald-400" /> {m.name} ({m.bpm || 128} BPM)
                   </button>
                 ))}
               </div>
@@ -3889,18 +3638,16 @@ Reply ONLY valid JSON with this exact schema:
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[#00e5ff] flex items-center gap-1.5">
-                  <Eye size={14} /> Multimodal Vision AI Director (Watches 14 Video Frames + Beats)
+                  <Sparkles size={14} /> 100x Multimodal AI Director (English + Hinglish)
                 </span>
-                <span className="text-[10px] text-zinc-400">
-                  {aiStatus || (apiKey && online ? "Gemini 2.5 Flash Vision Active" : "Offline Motion-Peak Vision AI")}
-                </span>
+                <span className="text-[10px] text-zinc-400">{apiKey && online ? "Gemini 2.5 Flash Active" : "Offline Hinglish Engine"}</span>
               </div>
               <div className="flex gap-2">
                 <textarea
                   rows={2}
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder='e.g. "Parth edits jaisa football slow-mo banao, action peak pe velocity ramp + punch zoom aur player ke piche text"'
+                  placeholder='e.g. "Parth edits jaisa football slow-mo banao, drop pe reverse bounce aur player ke piche text, zero flash"'
                   className="flex-1 rounded-xl bg-black border border-zinc-800 focus:border-[#00e5ff] px-3 py-2 text-xs outline-none resize-none"
                 />
                 <button
@@ -3909,14 +3656,14 @@ Reply ONLY valid JSON with this exact schema:
                   className="px-4 rounded-xl bg-gradient-to-r from-[#00e5ff] to-[#8b5cf6] text-black text-xs font-extrabold flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                  {aiBusy ? "Watching..." : "Watch & Edit"}
+                  Generate
                 </button>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {[
                   "Parth edits jaisa football slow-mo banao, drop pe reverse bounce aur player ke piche text, zero flash",
-                  "Hardcore phonk hype edit with Dark CC, beat punch zooms & AE spring shakes on action peaks",
-                  "Wizard anime velocity AMV with smooth 2.5x to 0.35x speed ramps & neon cutout",
+                  "Hardcore phonk edit with heavy beat shakes & RGB split",
+                  "Wizard anime velocity edit with Twixtor & neon cutout",
                 ].map((sample) => (
                   <button
                     key={sample}
@@ -3927,22 +3674,6 @@ Reply ONLY valid JSON with this exact schema:
                   </button>
                 ))}
               </div>
-              {sampledThumbs.length > 0 && (
-                <div className="pt-1">
-                  <div className="text-[10px] text-zinc-400 mb-1">Frames watched by AI (timestamped + motion score):</div>
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                    {sampledThumbs.map((th, i) => (
-                      <div key={i} className="shrink-0 w-20 rounded-lg overflow-hidden border border-zinc-800 bg-black">
-                        <img src={th.src} alt={`t=${th.t}s`} className="w-full h-11 object-cover" />
-                        <div className="px-1 py-0.5 text-[9px] font-mono text-zinc-400 flex justify-between">
-                          <span>{th.t}s</span>
-                          <span className="text-[#00e5ff]">m:{th.motion}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           );
         }
@@ -3953,7 +3684,7 @@ Reply ONLY valid JSON with this exact schema:
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-xs font-bold text-[#00e5ff]">Reference Video Style Cloner</div>
-                  <p className="text-[11px] text-zinc-400">Upload any 5–25s reference edit (MP4/WebM ≤ 20MB) to extract & clone its BPM, S-curve velocity, AE spring shakes & Dark CC.</p>
+                  <p className="text-[11px] text-zinc-400">Upload any 5–25s reference edit (MP4/WebM ≤ 20MB) to extract & clone its BPM, velocity, shakes & CC.</p>
                 </div>
                 <button
                   onClick={() => refVideoInputRef.current?.click()}
@@ -3970,7 +3701,7 @@ Reply ONLY valid JSON with this exact schema:
                   <span><b>BPM:</b> {clonedDna.bpm}</span>
                   <span><b>Speed:</b> {clonedDna.velocityCurve?.speed}×</span>
                   <span><b>Shake:</b> {clonedDna.shakePhysics?.shake}</span>
-                  <span><b>Punch:</b> {clonedDna.shakePhysics?.punchZoom}%</span>
+                  <span><b>RGB:</b> {clonedDna.rgbSplit}</span>
                 </div>
               )}
             </div>
@@ -3984,6 +3715,7 @@ Reply ONLY valid JSON with this exact schema:
 
       const renderEditor = () => (
         <div className="h-screen w-screen flex flex-col bg-black text-zinc-100 overflow-hidden">
+          {/* Hidden Inputs */}
           <input ref={addClipInputRef} type="file" multiple hidden accept="video/*,audio/*,.mp4,.webm,.mov,.mp3,.wav"
             onChange={(e) => { handleAddFilesInEditor([...(e.target.files || [])], "main"); e.target.value = ""; }} />
           <input ref={addAudioInputRef} type="file" multiple hidden accept="audio/*,.mp3,.wav,.ogg,.m4a"
@@ -3993,6 +3725,7 @@ Reply ONLY valid JSON with this exact schema:
           <input ref={refVideoInputRef} type="file" hidden accept="video/*,.mp4,.webm,.mov"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handleCloneReference(f); }} />
 
+          {/* Top Bar */}
           <header className="h-11 shrink-0 px-3 flex items-center justify-between border-b border-zinc-900 bg-[#0b0b0e]">
             <div className="flex items-center gap-2">
               <button
@@ -4047,6 +3780,7 @@ Reply ONLY valid JSON with this exact schema:
             </div>
           </header>
 
+          {/* Center Video Canvas */}
           <div className={`${fullscreenPreview ? "fixed inset-0 z-40 bg-black" : "flex-1 min-h-0 relative bg-black"} flex flex-col`}>
             <div className="flex-1 min-h-0 flex items-center justify-center p-2" style={{ containerType: "size" }}>
               <div
@@ -4078,6 +3812,7 @@ Reply ONLY valid JSON with this exact schema:
               </div>
             </div>
 
+            {/* Canvas Transport Bar (Play/Pause, Timecode, Undo/Redo, Fullscreen) */}
             <div className="h-10 shrink-0 px-4 flex items-center justify-between bg-black border-t border-zinc-900">
               <div className="font-mono text-[11px] text-zinc-300">
                 <span className="text-white font-semibold">{fmtMMSS(uiT)}</span>
@@ -4112,6 +3847,7 @@ Reply ONLY valid JSON with this exact schema:
             </div>
           </div>
 
+          {/* CapCut Timeline Section */}
           <section className="h-48 shrink-0 bg-[#0b0b0e] border-t border-zinc-900 flex flex-col">
             <div className="h-7 shrink-0 px-3 flex items-center justify-between border-b border-zinc-900">
               <div className="flex items-center gap-2">
@@ -4126,6 +3862,7 @@ Reply ONLY valid JSON with this exact schema:
             </div>
 
             <div className="flex flex-1 min-h-0">
+              {/* Left Utility Rail */}
               <div className="w-16 shrink-0 border-r border-zinc-900 bg-black flex flex-col items-center justify-center gap-2 text-[9px] text-zinc-400">
                 <button
                   onClick={() => setVideoMuted((m) => !m)}
@@ -4148,6 +3885,7 @@ Reply ONLY valid JSON with this exact schema:
                 </button>
               </div>
 
+              {/* Scrollable Tracks */}
               <div
                 ref={tlScrollRef}
                 className="relative flex-1 overflow-x-auto overflow-y-auto"
@@ -4163,6 +3901,7 @@ Reply ONLY valid JSON with this exact schema:
                 }}
               >
                 <div className="relative min-h-full" style={{ width: timelineWidth }}>
+                  {/* Time Ruler */}
                   <div className="relative h-5 border-b border-zinc-900 bg-black/50">
                     {Array.from({ length: Math.ceil(duration) + 1 }).map((_, s) => (
                       <div key={s} className="absolute top-0 h-full" style={{ left: s * pxPerSec }}>
@@ -4172,6 +3911,7 @@ Reply ONLY valid JSON with this exact schema:
                     ))}
                   </div>
 
+                  {/* Main Video Track */}
                   <div className="relative h-12 border-b border-zinc-900 flex items-center">
                     {mainClips.map((s) => {
                       const m = media.find((x) => x.id === s.mediaId);
@@ -4186,7 +3926,6 @@ Reply ONLY valid JSON with this exact schema:
                           <span onPointerDown={(e) => startTrim(e, s, "l")} className="absolute left-0 inset-y-0 w-2 cursor-ew-resize bg-white/15 hover:bg-[#00e5ff]" />
                           <span onPointerDown={(e) => startTrim(e, s, "r")} className="absolute right-0 inset-y-0 w-2 cursor-ew-resize bg-white/15 hover:bg-[#00e5ff]" />
                           <span className="truncate font-medium">{m?.name || "Clip"}</span>
-                          {s.settings.darkCC && <span className="px-1 rounded bg-purple-500/25 text-purple-300 text-[8px]">CC</span>}
                           {s.settings.reverse && <span className="px-1 rounded bg-cyan-500/20 text-[#00e5ff] text-[8px]">REV</span>}
                           {s.settings.pingPong && <span className="px-1 rounded bg-violet-500/30 text-violet-300 text-[8px]">BOUNCE</span>}
                           {s.settings.cutout && <span className="px-1 rounded bg-emerald-500/20 text-emerald-300 text-[8px]">CUT</span>}
@@ -4206,6 +3945,7 @@ Reply ONLY valid JSON with this exact schema:
                     </button>
                   </div>
 
+                  {/* FX & Overlay Lane */}
                   {(overlayClips.length > 0 || mainClips.some((c) => Object.keys(c.fx || {}).length > 0)) && (
                     <div className="relative h-6 border-b border-zinc-900">
                       {mainClips.map((s) => {
@@ -4230,6 +3970,7 @@ Reply ONLY valid JSON with this exact schema:
                     </div>
                   )}
 
+                  {/* Text Lane */}
                   {texts.length > 0 && (
                     <div className="relative h-6 border-b border-zinc-900">
                       {texts.map((tx) => (
@@ -4245,6 +3986,7 @@ Reply ONLY valid JSON with this exact schema:
                     </div>
                   )}
 
+                  {/* Audio Track + Beat Markers */}
                   <div className="relative h-10 flex items-center">
                     {aSegs.length === 0 ? (
                       <button
@@ -4264,7 +4006,7 @@ Reply ONLY valid JSON with this exact schema:
                             className={`absolute top-1 bottom-1 rounded-lg bg-emerald-950/70 border px-2 text-[10px] text-emerald-200 flex items-center truncate cursor-pointer ${sel ? "border-emerald-300" : "border-emerald-800"}`}
                             style={{ left: s.start * pxPerSec, width: Math.max(16, s.dur * pxPerSec) }}
                           >
-                            ♪ {m?.name || "Audio"} ({fmtMMSS(s.dur)})
+                            ♪ {m?.name || "Audio"}
                             {m?.beats?.map((b, i) => {
                               const loc = b - s.off;
                               if (loc < 0 || loc > s.dur) return null;
@@ -4276,6 +4018,7 @@ Reply ONLY valid JSON with this exact schema:
                     )}
                   </div>
 
+                  {/* Playhead Line */}
                   <div className="absolute top-0 bottom-0 w-0.5 bg-white pointer-events-none z-20" style={{ left: uiT * pxPerSec }}>
                     <div className="absolute -top-0.5 -left-1.5 w-3.5 h-2.5 rounded-sm bg-white" />
                   </div>
@@ -4284,8 +4027,9 @@ Reply ONLY valid JSON with this exact schema:
             </div>
           </section>
 
+          {/* Contextual Bottom Drawer */}
           {drawer && (
-            <div className="max-h-64 shrink-0 border-t border-zinc-800 bg-[#141418] overflow-y-auto p-3">
+            <div className="max-h-60 shrink-0 border-t border-zinc-800 bg-[#141418] overflow-y-auto p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">{drawer}</span>
                 <button onClick={() => setDrawer(null)} className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white">
@@ -4296,6 +4040,7 @@ Reply ONLY valid JSON with this exact schema:
             </div>
           )}
 
+          {/* CapCut Bottom Action Dock */}
           <footer className="h-14 shrink-0 border-t border-zinc-900 bg-black flex items-center overflow-x-auto no-scrollbar px-2 gap-1 justify-around">
             {[
               { id: "edit", label: "Edit", icon: Scissors },
@@ -4384,4 +4129,3 @@ Reply ONLY valid JSON with this exact schema:
   </script>
 </body>
 </html>
-
